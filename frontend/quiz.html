@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kansei · Quiz</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F0E8;
+      --surface: #EDE8DF;
+      --border: #D4CEC4;
+      --text-primary: #1A1815;
+      --text-secondary: #6B6560;
+      --text-dim: #A8A29C;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 128px 128px;
+    }
+
+    .top {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .logo {
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      color: var(--text-dim);
+    }
+
+    .counter {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-bar {
+      width: 100%;
+      max-width: 920px;
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 3rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--text-secondary);
+      transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+
+    .prompt {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+      max-width: 920px;
+      opacity: 1;
+      transition: opacity 0.18s ease;
+    }
+    .pair.fading { opacity: 0; }
+
+    .card {
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: border-color 0.25s;
+    }
+    .card:hover { border-color: #bbb; }
+
+    .card img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      filter: grayscale(8%);
+    }
+    .card:hover img { transform: scale(1.02); filter: grayscale(0%); }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(26,24,21,0.04);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+    }
+    .card:hover .card-overlay { opacity: 1; }
+
+    .card-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 2rem 1rem 1rem;
+      background: linear-gradient(transparent, rgba(245,240,232,0.85));
+      font-size: 0.58rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .card:hover .card-label { opacity: 1; }
+
+    .skip {
+      margin-top: 2rem;
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: color 0.2s;
+      border: none;
+      background: none;
+    }
+    .skip:hover { color: var(--text-secondary); }
+
+    .loading {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-align: center;
+      grid-column: 1 / -1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <span class="logo">◈ KANSEI</span>
+    <span class="counter" id="counter">1 / 25</span>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress"></div>
+  </div>
+
+  <p class="prompt">Which pulls you in?</p>
+
+  <div class="pair" id="pair">
+    <div class="loading">Loading...</div>
+  </div>
+
+  <button class="skip" id="skip">skip</button>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+    const TOTAL = 25;
+
+    let pairs = [];
+    let round = 0;
+    let chosenVectors = [];
+    let choiceHistory = [];
+    let transitioning = false;
+
+    async function init() {
+      const res = await fetch(`${API}/api/pairs?n=${TOTAL}`);
+      const data = await res.json();
+      pairs = data.pairs;
+      renderRound();
+    }
+
+    async function getCentroid(aesthetic) {
+      const res = await fetch(`${API}/api/centroid/${encodeURIComponent(aesthetic)}`);
+      const data = await res.json();
+      return data.vector;
+    }
+
+    async function choose(aesthetic) {
+      if (transitioning) return;
+      transitioning = true;
+
+      const pairEl = document.getElementById('pair');
+      pairEl.classList.add('fading');
+
+      const vector = await getCentroid(aesthetic);
+      chosenVectors.push(vector);
+      choiceHistory.push({ aesthetic, round });
+      round++;
+
+      await sleep(200);
+
+      if (round >= TOTAL) {
+        sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
+        sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
+        window.location.href = '/result';
+      } else {
+        renderRound();
+        pairEl.classList.remove('fading');
+        transitioning = false;
+      }
+    }
+
+    function renderRound() {
+      const pair = pairs[round];
+      const pct = (round / TOTAL) * 100;
+
+      document.getElementById('counter').textContent = `${round + 1} / ${TOTAL}`;
+      document.getElementById('progress').style.width = `${pct}%`;
+
+      const container = document.getElementById('pair');
+      container.innerHTML = `
+        <div class="card" id="card-left">
+          <img src="${API}/images/${encodeURIComponent(pair.left.aesthetic)}/${encodeURIComponent(pair.left.image)}" alt="" />
+          <div class="card-overlay"></div>
+          <div class="card-label">Choose</div>
+        </div>
+        <div class="card" id="card-right">
+          <img src="${API}/images/${encodeURIComponent(pair.right.aesthetic)}/${encodeURIComponent(pair.right.image)}" alt="" />
+          <div class="card-overlay"></div>
+          <div class="card-label">Choose</div>
+        </div>
+      `;
+
+      document.getElementById('card-left').addEventListener('click', () => choose(pair.left.aesthetic));
+      document.getElementById('card-right').addEventListener('click', () => choose(pair.right.aesthetic));
+    }
+
+    document.getElementById('skip').addEventListener('click', async () => {
+      if (transitioning) return;
+      transitioning = true;
+      const pairEl = document.getElementById('pair');
+      pairEl.classList.add('fading');
+      round++;
+      await sleep(200);
+      if (round >= TOTAL) {
+        sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
+        sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
+        window.location.href = '/result';
+      } else {
+        renderRound();
+        pairEl.classList.remove('fading');
+        transitioning = false;
+      }
+    });
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    init();
+  </script>
+</body>
+</html>

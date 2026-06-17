@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kansei</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F0E8;
+      --surface: #EDE8DF;
+      --border: #D4CEC4;
+      --text-primary: #1A1815;
+      --text-secondary: #6B6560;
+      --text-dim: #A8A29C;
+      --accent: #E8E0D0;
+    }
+
+    body {
+      position: relative;
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 128px 128px;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 2.5rem 2rem;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .logo {
+      font-size: 0.8rem;
+      letter-spacing: 0.25em;
+      color: var(--text-secondary);
+    }
+
+    .nav-meta {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 5rem 0 3rem;
+    }
+
+    .tagline {
+      font-size: 0.62rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(4rem, 12vw, 9rem);
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 0.9;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .sub {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      max-width: 440px;
+      margin-bottom: 4rem;
+    }
+
+    .entries {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      max-width: 680px;
+    }
+
+    .entry {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .entry:hover {
+      border-color: #333;
+      background: #161412;
+    }
+
+    .entry-icon {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+    }
+
+    .entry-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .entry-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .entry-action {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+
+    .entry-upload.dragover {
+      border-color: #444;
+      background: #161412;
+    }
+
+    .upload-state {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .upload-state.active { display: flex; }
+
+    .upload-spinner {
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--border);
+      border-top-color: var(--text-secondary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .upload-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+    }
+
+    #file-input { display: none; }
+
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-meta {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <span class="logo">◈ KANSEI</span>
+    <span class="nav-meta">感性 · aesthetic intelligence</span>
+  </nav>
+
+  <main>
+    <p class="tagline">What pulls you in?</p>
+    <h1>Kansei</h1>
+    <p class="sub">
+      Discover your aesthetic identity through image choices —
+      or drop any photo to instantly classify its visual DNA across 16 aesthetics.
+    </p>
+
+    <div class="entries">
+      <a class="entry" href="/quiz">
+        <span class="entry-icon">◈</span>
+        <div class="entry-title">Take the quiz</div>
+        <div class="entry-desc">
+          25 image pairs. Choose what pulls you in.
+          Your choices build your aesthetic fingerprint.
+        </div>
+        <div class="entry-action">Begin →</div>
+      </a>
+
+      <div class="entry entry-upload" id="upload-zone">
+        <span class="entry-icon">↑</span>
+        <div class="entry-title">Classify an image</div>
+        <div class="entry-desc">
+          Drop any photo — a room, outfit, artwork, or screenshot.
+          CLIP reads its visual DNA instantly.
+        </div>
+        <div class="entry-action">Drop image or click →</div>
+        <div class="upload-state" id="upload-state">
+          <div class="upload-spinner"></div>
+          <div class="upload-label">Classifying...</div>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*" />
+  </main>
+
+  <footer>
+    <span class="footer-meta">CLIP · UMAP · 16 aesthetics · 102 images</span>
+    <span class="footer-meta">v1.0</span>
+  </footer>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+    const zone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadState = document.getElementById('upload-state');
+
+    zone.addEventListener('click', () => fileInput.click());
+
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      zone.classList.add('dragover');
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) classify(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) classify(fileInput.files[0]);
+    });
+
+    async function classify(file) {
+      uploadState.classList.add('active');
+
+      // Store image as base64 for display on result page
+      const reader = new FileReader();
+      reader.onload = async () => {
+        sessionStorage.setItem('kansei_uploaded_image', reader.result);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const res = await fetch(`${API}/api/classify`, {
+            method: 'POST',
+            body: formData,
+          });
+          const data = await res.json();
+          sessionStorage.setItem('kansei_classify_result', JSON.stringify(data));
+          sessionStorage.setItem('kansei_source', 'classify');
+          window.location.href = '/result';
+        } catch (err) {
+          uploadState.classList.remove('active');
+          alert('Something went wrong. Make sure the server is running.');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  </script>
+</body>
+</html>

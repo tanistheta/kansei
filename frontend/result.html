@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kansei · Result</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F0E8;
+      --surface: #EDE8DF;
+      --border: #D4CEC4;
+      --text-primary: #1A1815;
+      --text-secondary: #6B6560;
+      --text-dim: #A8A29C;
+      --accent: #1A1815;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem 2rem;
+      position: relative;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 128px 128px;
+    }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto 5rem;
+    }
+    .logo {
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .retake {
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 0.4rem 1rem;
+      background: none;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .retake:hover { color: var(--text-secondary); border-color: #aaa; }
+
+    /* Section label */
+    .section-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+    }
+
+    .divider {
+      max-width: 1100px;
+      margin: 4rem auto;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto 0;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .hero.visible { opacity: 1; transform: none; }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 9vw, 7.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 0.92;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-word {
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 500px;
+      line-height: 1.7;
+      margin-top: 1.5rem;
+    }
+
+    .hero-image {
+      width: 140px;
+      height: 175px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      display: none;
+      flex-shrink: 0;
+      filter: grayscale(15%);
+    }
+    .hero-image.show { display: block; }
+
+    /* ── DNA bar ── */
+    .dna-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.1s, transform 0.8s ease 0.1s;
+    }
+    .dna-section.visible { opacity: 1; transform: none; }
+
+    .dna-bar {
+      width: 100%;
+      height: 10px;
+      display: flex;
+      border-radius: 0;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+    }
+
+    .dna-segment {
+      height: 100%;
+      transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+
+    .dna-labels {
+      display: flex;
+      gap: 2px;
+      margin-top: 0.6rem;
+      width: 100%;
+    }
+
+    .dna-label-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .dna-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dna-label-text {
+      font-size: 0.5rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .dna-desc {
+      margin-top: 1rem;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 680px;
+    }
+
+    /* ── Spiral ── */
+    .spiral-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+    }
+    .spiral-section.visible { opacity: 1; transform: none; }
+
+    #spiral-canvas {
+      width: 100%;
+      height: 520px;
+    }
+
+    /* ── Insight block ── */
+    .insight-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
+    }
+    .insight-section.visible { opacity: 1; transform: none; }
+
+    .insight-paragraph {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .insight-right {}
+
+    .tension-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+
+    .tension-line {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: var(--text-primary);
+      margin-bottom: 2.5rem;
+    }
+
+    .consistency-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.8rem;
+    }
+
+    .consistency-score {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .consistency-desc {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ── Fibonacci ── */
+    .fib-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+    }
+    .fib-section.visible { opacity: 1; transform: none; }
+
+    .fib-row-1 {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 3px;
+      margin-bottom: 3px;
+    }
+    .fib-right-stack { display: grid; grid-template-rows: 1fr 1fr; gap: 3px; }
+    .fib-row-2 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+
+    .fib-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+    .fib-box:hover { border-color: #bbb; }
+    .fib-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent, transparent);
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    .fib-rank {
+      position: absolute;
+      top: 0.9rem; right: 0.9rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      color: var(--text-dim);
+    }
+    .fib-name {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+    .fib-score {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .fib-score span {
+      font-size: 0.45em;
+      font-weight: 400;
+      color: var(--text-dim);
+    }
+    .fib-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 2px;
+      transition: width 1.1s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+
+    .fib-box-large { min-height: 280px; }
+    .fib-box-large .fib-score { font-size: 3.8rem; }
+    .fib-box-large .fib-name { font-size: 0.72rem; margin-bottom: 0.5rem; }
+    .fib-box-medium { min-height: 138px; }
+    .fib-box-medium .fib-score { font-size: 2.2rem; }
+    .fib-box-small { min-height: 100px; padding: 1rem; }
+    .fib-box-small .fib-score { font-size: 1.5rem; }
+    .fib-box-small .fib-name { font-size: 0.58rem; }
+
+    /* ── UMAP + Moodboard ── */
+    .bottom-columns {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 4rem;
+      align-items: start;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s;
+    }
+    .bottom-columns.visible { opacity: 1; transform: none; }
+
+    #umap-plot {
+      width: 100%;
+      height: 480px;
+      border: 1px solid var(--border);
+    }
+    .umap-note {
+      margin-top: 0.6rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+
+    .moodboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+    }
+    .moodboard-grid a { display: block; }
+    .moodboard-grid img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      display: block;
+      border: 1px solid var(--border);
+      transition: opacity 0.3s;
+      filter: grayscale(8%);
+    }
+    .moodboard-grid img:hover { opacity: 0.85; filter: grayscale(0%); }
+
+    .moodboard-credit {
+      margin-top: 0.6rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .moodboard-credit a { color: var(--text-dim); text-decoration: none; }
+    .moodboard-credit a:hover { color: var(--text-secondary); }
+
+    /* ── Actions ── */
+    .actions {
+      max-width: 1100px;
+      margin: 3rem auto 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    .action-btn {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.5rem 1.2rem;
+      background: none;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .action-btn:hover { color: var(--text-secondary); border-color: #aaa; }
+    .action-btn.primary { color: var(--text-secondary); border-color: #aaa; }
+    .action-btn.primary:hover { color: var(--text-primary); border-color: var(--text-primary); }
+
+    /* Share card */
+    #share-card {
+      position: fixed;
+      left: -9999px; top: 0;
+      width: 1080px;
+      background: var(--bg);
+      padding: 5rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .share-card-inner { border: 1px solid var(--border); padding: 4rem; }
+    .share-mark { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--text-dim); margin-bottom: 3rem; }
+    .share-label { font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 1rem; }
+    .share-title { font-size: 5rem; font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; margin-bottom: 0.5rem; }
+    .share-word { font-size: 1.2rem; font-weight: 300; font-style: italic; color: var(--text-dim); margin-bottom: 1.5rem; }
+    .share-desc { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 3rem; max-width: 500px; line-height: 1.65; }
+    .share-scores { display: flex; gap: 3rem; margin-bottom: 3rem; }
+    .share-score-name { font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.3rem; }
+    .share-score-val { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; }
+    .share-footer { font-size: 0.58rem; letter-spacing: 0.2em; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 1.5rem; }
+
+    /* Loading */
+    .loading-state {
+      max-width: 1100px;
+      margin: 10rem auto;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+    .dot { display: inline-block; animation: blink 1.4s ease-in-out infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100%{opacity:0.15} 40%{opacity:1} }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a class="logo" href="/">◈ KANSEI</a>
+    <a class="retake" href="/">← Back</a>
+  </nav>
+
+  <div class="loading-state" id="loading">
+    Computing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+  </div>
+
+  <div id="content" style="display:none">
+
+    <!-- Hero -->
+    <div class="hero" id="hero">
+      <div class="hero-top">
+        <div class="hero-left">
+          <p class="hero-label">Your aesthetic is</p>
+          <h1 class="hero-title" id="hero-title">—</h1>
+          <div class="hero-word" id="hero-word">—</div>
+          <p class="hero-desc" id="hero-desc">—</p>
+        </div>
+        <img class="hero-image" id="hero-image" src="" alt="" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- DNA Bar -->
+    <div class="dna-section" id="dna-section">
+      <p class="section-label">Aesthetic DNA</p>
+      <div class="dna-bar" id="dna-bar"></div>
+      <div class="dna-labels" id="dna-labels"></div>
+      <p class="dna-desc" id="dna-desc"></p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Spiral -->
+    <div class="spiral-section" id="spiral-section">
+      <p class="section-label">Your journey through 25 choices</p>
+      <svg id="spiral-canvas"></svg>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Insight -->
+    <div class="insight-section" id="insight-section">
+      <div>
+        <p class="section-label">Personality insight</p>
+        <p class="insight-paragraph" id="insight-paragraph">—</p>
+      </div>
+      <div class="insight-right">
+        <p class="tension-label">Aesthetic tension</p>
+        <p class="tension-line" id="tension-line">—</p>
+        <p class="consistency-label">Consistency score</p>
+        <div class="consistency-score" id="consistency-score">—</div>
+        <p class="consistency-desc" id="consistency-desc">—</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Fibonacci -->
+    <div class="fib-section" id="fib-section">
+      <p class="section-label">Aesthetic breakdown</p>
+      <div class="fib-row-1">
+        <div class="fib-box fib-box-large" id="box-1"><span class="fib-rank">#1</span><div class="fib-name" id="name-1">—</div><div class="fib-score" id="score-1">—<span>%</span></div><div class="fib-bar" id="bar-1"></div></div>
+        <div class="fib-right-stack">
+          <div class="fib-box fib-box-medium" id="box-2"><span class="fib-rank">#2</span><div class="fib-name" id="name-2">—</div><div class="fib-score" id="score-2">—<span>%</span></div><div class="fib-bar" id="bar-2"></div></div>
+          <div class="fib-box fib-box-medium" id="box-3"><span class="fib-rank">#3</span><div class="fib-name" id="name-3">—</div><div class="fib-score" id="score-3">—<span>%</span></div><div class="fib-bar" id="bar-3"></div></div>
+        </div>
+      </div>
+      <div class="fib-row-2">
+        <div class="fib-box fib-box-small" id="box-4"><span class="fib-rank">#4</span><div class="fib-name" id="name-4">—</div><div class="fib-score" id="score-4">—<span>%</span></div><div class="fib-bar" id="bar-4"></div></div>
+        <div class="fib-box fib-box-small" id="box-5"><span class="fib-rank">#5</span><div class="fib-name" id="name-5">—</div><div class="fib-score" id="score-5">—<span>%</span></div><div class="fib-bar" id="bar-5"></div></div>
+        <div class="fib-box fib-box-small" id="box-6"><span class="fib-rank">#6</span><div class="fib-name" id="name-6">—</div><div class="fib-score" id="score-6">—<span>%</span></div><div class="fib-bar" id="bar-6"></div></div>
+        <div class="fib-box fib-box-small" id="box-7"><span class="fib-rank">#7</span><div class="fib-name" id="name-7">—</div><div class="fib-score" id="score-7">—<span>%</span></div><div class="fib-bar" id="bar-7"></div></div>
+        <div class="fib-box fib-box-small" id="box-8"><span class="fib-rank">#8</span><div class="fib-name" id="name-8">—</div><div class="fib-score" id="score-8">—<span>%</span></div><div class="fib-bar" id="bar-8"></div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- UMAP + Moodboard -->
+    <div class="bottom-columns" id="bottom-cols">
+      <div>
+        <p class="section-label">Where you land in aesthetic space</p>
+        <div id="umap-plot"></div>
+        <p class="umap-note">● centroid · ✕ you · lines = top 3 · drag to rotate</p>
+      </div>
+      <div>
+        <p class="section-label">Moodboard</p>
+        <div class="moodboard-grid" id="moodboard"></div>
+        <p class="moodboard-credit">Photos via <a href="https://unsplash.com" target="_blank">Unsplash</a></p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="action-btn" onclick="copyResult()">Copy result</button>
+      <button class="action-btn primary" onclick="downloadCard()">Save card ↓</button>
+    </div>
+
+    <!-- Share card -->
+    <div id="share-card">
+      <div class="share-card-inner">
+        <div class="share-mark">◈ KANSEI</div>
+        <div class="share-label">Your aesthetic is</div>
+        <div class="share-title" id="sc-title">—</div>
+        <div class="share-word" id="sc-word">—</div>
+        <div class="share-desc" id="sc-desc">—</div>
+        <div class="share-scores" id="sc-scores"></div>
+        <div class="share-footer">kansei · CLIP · aesthetic intelligence</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+    const UNSPLASH_KEY = '66xO-AsyUQFPB6i-jmlQnTqUOGz-eKnDxuud25mUYEU';
+
+    const COLORS = {
+      "afrofuturism":"#9B59B6","boho":"#E67E22","brutalism":"#7F8C8D",
+      "coastal cool":"#3498DB","cottagecore":"#4A8A5A","cyber minimalism":"#00CED1",
+      "cyberpunk":"#CC00CC","dark academia":"#8B6914","ethereal":"#7A5A9A",
+      "glam maximalism":"#A07800","quiet luxury":"#5A5550","solarpunk":"#2ECC71",
+      "teracotta modernism":"#C86040","vintage americana":"#C84040",
+      "wabi sabi":"#7A6A50","zen modern":"#708090",
+    };
+
+    // Aesthetic descriptors
+    const DESCRIPTORS = {
+      "afrofuturism": "Cosmic",
+      "boho": "Wandering",
+      "brutalism": "Uncompromising",
+      "coastal cool": "Effortless",
+      "cottagecore": "Tender",
+      "cyber minimalism": "Precise",
+      "cyberpunk": "Fractured",
+      "dark academia": "Searching",
+      "ethereal": "Dissolving",
+      "glam maximalism": "Abundant",
+      "quiet luxury": "Restrained",
+      "solarpunk": "Hopeful",
+      "teracotta modernism": "Grounded",
+      "vintage americana": "Nostalgic",
+      "wabi sabi": "Accepting",
+      "zen modern": "Still",
+    };
+
+    // Personality paragraphs per aesthetic
+    const PERSONALITIES = {
+      "afrofuturism": "You exist at the intersection of memory and possibility. Your aesthetic sensibility pulls toward the mythic — richness, power, and a future that doesn't erase where it came from. You're drawn to things that carry weight and tell stories older than themselves.",
+      "boho": "You move through the world collecting rather than curating. Your taste is eclectic in the truest sense — not assembled, but accumulated through curiosity. You're drawn to things that have been touched by human hands, by sun, by time.",
+      "brutalism": "You have a deep tolerance for honesty. You prefer things that show what they're made of — no ornament, no apology. There's a quiet confidence in your aesthetic: you don't need things to be beautiful to find them compelling.",
+      "coastal cool": "Your ideal state is unhurried. You're drawn to environments that feel inevitable rather than designed — salt, sun, texture worn smooth by water. Your aesthetic is about ease that isn't performed.",
+      "cottagecore": "You find the domestic sacred. The small rituals of everyday life — a jar of dried flowers, bread rising, rain on a window — carry real meaning for you. Your aesthetic is a form of care made visible.",
+      "cyber minimalism": "You think in systems. Your aesthetic strips away everything that isn't load-bearing — what remains is precise, cold, and intentional. You find beauty in reduction, in the elegance of a thing that works exactly as it should.",
+      "cyberpunk": "You're drawn to beauty that's slightly broken. Neon through rain, beauty in decay, the human thing persisting in an inhuman world. Your aesthetic carries tension — it's never entirely comfortable, and that's deliberate.",
+      "dark academia": "You romanticize the pursuit of knowledge. Candlelit libraries, worn leather, the smell of old paper — these aren't just aesthetics for you, they're emotional states. You find meaning in things that have been thought through.",
+      "ethereal": "You're drawn to thresholds — light that's just fading, things that exist at the edge of definition. Your aesthetic is about softness as a form of strength, beauty that doesn't demand attention but rewards it.",
+      "glam maximalism": "You believe more is a statement. Your aesthetic is theatrical, deliberate, unapologetically excessive — not as a failure of restraint but as a celebration of abundance. You understand that boldness is its own form of sophistication.",
+      "quiet luxury": "You understand that the most powerful things don't announce themselves. Your aesthetic is about quality over signal — things that reveal themselves slowly to those who know how to look. Restraint, for you, is a form of confidence.",
+      "solarpunk": "You're oriented toward the possible. Your aesthetic is warm and communal — you're drawn to futures that feel livable, to the beauty of things that grow, to the idea that technology and nature can coexist generously.",
+      "teracotta modernism": "You're drawn to warmth that has weight. Your aesthetic favors organic forms, clay tones, materials that carry the trace of their making. There's a Mediterranean quality to your sensibility — sun-baked, unhurried, honest.",
+      "vintage americana": "You're nostalgic for a version of the world that felt open. Open roads, neon signs, the particular optimism of mid-century America — your aesthetic is about a time when the future felt close and attainable.",
+      "wabi sabi": "You've made peace with impermanence. Your aesthetic finds beauty precisely where others see flaws — the crack in the glaze, the weathered wood, the thing that shows its age honestly. You understand that nothing stays, and you find that beautiful.",
+      "zen modern": "You design your world around silence. Your aesthetic values the things that aren't there as much as the things that are — empty space, single objects chosen with care, light that does the work. Stillness, for you, is a form of luxury.",
+    };
+
+    // Tension pairs (aesthetically opposite)
+    const TENSION_PAIRS = [
+      ["brutalism", "cottagecore", "Raw concrete and tender gardens — you're pulled between harshness and softness, structure and organic life."],
+      ["cyber minimalism", "boho", "Cold precision and wandering eclecticism — your taste exists in the space between system and soul."],
+      ["cyberpunk", "wabi sabi", "Neon decay and quiet acceptance — you find beauty in broken futures and in things that fade gracefully."],
+      ["glam maximalism", "quiet luxury", "Theatrical abundance and restrained elegance — you understand both the power of excess and the power of withholding."],
+      ["dark academia", "solarpunk", "The romance of the past and hope for the future — you live between nostalgia and possibility."],
+      ["afrofuturism", "zen modern", "Cosmic richness and meditative stillness — you're drawn to both depth and emptiness."],
+      ["vintage americana", "ethereal", "The concrete nostalgia of the open road and the dissolving softness of light at dusk."],
+      ["teracotta modernism", "coastal cool", "Warm earthen weight and effortless salt-air lightness — two versions of unhurried beauty."],
+    ];
+
+    let topAesthetic = '';
+    let topColor = '#1A1815';
+    let allScores = {};
+    let choiceHistory = [];
+
+    async function main() {
+      const source = sessionStorage.getItem('kansei_source');
+      let scoreData, umapData;
+
+      if (source === 'classify') {
+        const raw = sessionStorage.getItem('kansei_classify_result');
+        if (!raw) { window.location.href = '/'; return; }
+        const result = JSON.parse(raw);
+        scoreData = result;
+        umapData = result.umap;
+
+        const imgData = sessionStorage.getItem('kansei_uploaded_image');
+        if (imgData) {
+          const img = document.getElementById('hero-image');
+          img.src = imgData;
+          img.classList.add('show');
+        }
+
+        sessionStorage.removeItem('kansei_source');
+        sessionStorage.removeItem('kansei_classify_result');
+        sessionStorage.removeItem('kansei_uploaded_image');
+      } else {
+        const raw = sessionStorage.getItem('kansei_vectors');
+        if (!raw) { window.location.href = '/'; return; }
+        const vectors = JSON.parse(raw);
+
+        // Get choice history if available
+        const histRaw = sessionStorage.getItem('kansei_choices');
+        if (histRaw) choiceHistory = JSON.parse(histRaw);
+
+        const [scoreRes, umapRes] = await Promise.all([
+          fetch(`${API}/api/score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vectors }),
+          }),
+          fetch(`${API}/api/umap`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vectors }),
+          }),
+        ]);
+
+        scoreData = await scoreRes.json();
+        umapData = await umapRes.json();
+      }
+
+      topAesthetic = scoreData.top;
+      topColor = scoreData.color;
+      allScores = scoreData.scores;
+
+      renderHero(scoreData);
+      renderDNA(scoreData.scores);
+      renderSpiral(choiceHistory, scoreData.scores);
+      renderInsight(scoreData);
+      renderFibGrid(scoreData.scores);
+      renderUMAP(umapData, scoreData);
+      await renderMoodboard(scoreData.top);
+      renderShareCard(scoreData);
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+
+      requestAnimationFrame(() => {
+        const sections = ['hero', 'dna-section', 'spiral-section', 'insight-section', 'fib-section', 'bottom-cols'];
+        sections.forEach((id, i) => {
+          setTimeout(() => document.getElementById(id).classList.add('visible'), i * 120);
+        });
+        setTimeout(() => animateBars(), 500);
+        setTimeout(() => animateDNA(scoreData.scores), 300);
+      });
+    }
+
+    function renderHero(data) {
+      document.getElementById('hero-title').textContent = capitalize(data.top);
+      document.getElementById('hero-title').style.color = COLORS[data.top] || '#1A1815';
+      document.getElementById('hero-word').textContent = DESCRIPTORS[data.top] || '';
+      document.getElementById('hero-desc').textContent = data.description;
+    }
+
+    function renderDNA(scores) {
+      const bar = document.getElementById('dna-bar');
+      const labels = document.getElementById('dna-labels');
+      const entries = Object.entries(scores);
+      const total = entries.reduce((s, [, v]) => s + v, 0);
+
+      bar.innerHTML = entries.map(([aesthetic, pct]) => {
+        const w = (pct / total) * 100;
+        const color = COLORS[aesthetic] || '#888';
+        return `<div class="dna-segment" data-w="${w}" style="background:${color};opacity:0.85" title="${aesthetic}: ${Math.round(pct)}%"></div>`;
+      }).join('');
+
+      // Description
+      const descEl = document.getElementById('dna-desc');
+      if (descEl) {
+        const top3 = entries.slice(0, 3).map(([a]) => capitalize(a));
+        descEl.textContent = `Each color segment represents one of 16 aesthetics, sized by how strongly your choices aligned with it. Your palette is led by ${top3[0]}, ${top3[1]}, and ${top3[2]}.`;
+      }
+
+      // Labels with color dots
+      labels.innerHTML = entries.map(([aesthetic, pct]) => {
+        const color = COLORS[aesthetic] || '#888';
+        const w = (pct / total) * 100;
+        return `<div class="dna-label-item" style="flex:${w}"><span class="dna-dot" style="background:${color}"></span><span class="dna-label-text">${aesthetic}</span></div>`;
+      }).join('');
+    }
+
+    function animateDNA(scores) {
+      document.querySelectorAll('.dna-segment').forEach(seg => {
+        seg.style.transition = 'width 1.2s cubic-bezier(0.16,1,0.3,1)';
+        seg.style.width = seg.dataset.w + '%';
+      });
+    }
+
+    function renderSpiral(history, scores) {
+      const svg = d3.select('#spiral-canvas');
+      const container = document.getElementById('spiral-canvas').parentElement; const W = container.getBoundingClientRect().width || 900;
+      const H = 520;
+      svg.attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H);
+
+      const cx = W / 2, cy = H / 2;
+      const n = history.length > 0 ? history.length : 25;
+      const aestheticList = Object.keys(scores);
+
+      // Generate mock spiral data if no history
+      const data = history.length > 0
+        ? history
+        : aestheticList.slice(0, n).map((a, i) => ({ aesthetic: a, round: i }));
+
+      const turns = 3;
+      const maxR = Math.min(W, H) * 0.42;
+
+      // Spiral points
+      const points = data.map((d, i) => {
+        const t = i / (n - 1);
+        const angle = t * turns * 2 * Math.PI - Math.PI / 2;
+        const r = t * maxR;
+        return {
+          x: cx + r * Math.cos(angle),
+          y: cy + r * Math.sin(angle),
+          aesthetic: d.aesthetic || d,
+          t,
+          angle,
+          r,
+        };
+      });
+
+      // Draw soft connecting path
+      const line = d3.line()
+        .x(d => d.x)
+        .y(d => d.y)
+        .curve(d3.curveCatmullRom.alpha(0.5));
+
+      svg.append('path')
+        .datum(points)
+        .attr('d', line)
+        .attr('fill', 'none')
+        .attr('stroke', '#D4CEC4')
+        .attr('stroke-width', 1)
+        .attr('opacity', 0.6);
+
+      // Draw soft radiating circles at each node
+      points.forEach((p, i) => {
+        const color = COLORS[p.aesthetic] || '#888';
+        const size = 3 + p.t * 12;
+
+        // Outer glow circle (soft, translucent)
+        svg.append('circle')
+          .attr('cx', p.x).attr('cy', p.y)
+          .attr('r', size * 2.5)
+          .attr('fill', color)
+          .attr('opacity', 0.06);
+
+        // Mid ring
+        svg.append('circle')
+          .attr('cx', p.x).attr('cy', p.y)
+          .attr('r', size * 1.4)
+          .attr('fill', color)
+          .attr('opacity', 0.12);
+
+        // Core dot
+        svg.append('circle')
+          .attr('cx', p.x).attr('cy', p.y)
+          .attr('r', size * 0.5)
+          .attr('fill', color)
+          .attr('opacity', 0.8);
+
+        // Radiating lines (soft)
+        if (i % 3 === 0) {
+          const numLines = 8;
+          for (let l = 0; l < numLines; l++) {
+            const lineAngle = (l / numLines) * 2 * Math.PI;
+            const lineLen = size * 2.2;
+            svg.append('line')
+              .attr('x1', p.x).attr('y1', p.y)
+              .attr('x2', p.x + Math.cos(lineAngle) * lineLen)
+              .attr('y2', p.y + Math.sin(lineAngle) * lineLen)
+              .attr('stroke', color)
+              .attr('stroke-width', 0.5)
+              .attr('opacity', 0.18);
+          }
+        }
+      });
+
+      // Label first and last
+      if (points.length > 0) {
+        svg.append('text')
+          .attr('x', points[0].x + 12).attr('y', points[0].y + 4)
+          .attr('font-size', '9px').attr('fill', '#A8A29C')
+          .attr('letter-spacing', '0.1em')
+          .text('start');
+
+        const last = points[points.length - 1];
+        svg.append('text')
+          .attr('x', last.x + 12).attr('y', last.y + 4)
+          .attr('font-size', '9px').attr('fill', '#6B6560')
+          .attr('letter-spacing', '0.1em')
+          .text(capitalize(last.aesthetic));
+      }
+    }
+
+    function renderInsight(data) {
+      // Personality paragraph
+      document.getElementById('insight-paragraph').textContent =
+        PERSONALITIES[data.top] || 'Your aesthetic sensibility is uniquely your own.';
+
+      // Tension — find top 2 aesthetics and see if they match a tension pair
+      const top2 = Object.keys(data.scores).slice(0, 2);
+      let tensionText = null;
+      for (const [a, b, text] of TENSION_PAIRS) {
+        if ((top2.includes(a) && top2.includes(b)) ||
+            (Object.keys(data.scores).slice(0, 5).includes(a) &&
+             Object.keys(data.scores).slice(0, 5).includes(b))) {
+          tensionText = text;
+          break;
+        }
+      }
+      document.getElementById('tension-line').textContent =
+        tensionText || `You lean decisively toward ${capitalize(data.top)} — your aesthetic identity is focused rather than fragmented.`;
+
+      // Consistency score
+      const scoreVals = Object.values(data.scores);
+      const max = scoreVals[0], min = scoreVals[scoreVals.length - 1];
+      const spread = max - min;
+      const consistency = Math.round(Math.min(99, Math.max(40, (spread / max) * 180)));
+
+      document.getElementById('consistency-score').textContent = consistency + '%';
+
+      let consistencyDesc;
+      if (consistency >= 80) {
+        consistencyDesc = 'You have a decisive aesthetic identity — your choices clustered around a clear visual sensibility.';
+      } else if (consistency >= 60) {
+        consistencyDesc = 'Your taste is eclectic but coherent — you draw from multiple aesthetics without losing a center of gravity.';
+      } else {
+        consistencyDesc = 'Your aesthetic spans widely — you\'re drawn to contrast and contradiction, resisting easy categorization.';
+      }
+      document.getElementById('consistency-desc').textContent = consistencyDesc;
+    }
+
+    function renderFibGrid(scores) {
+      const entries = Object.entries(scores).slice(0, 8);
+      const maxRaw = entries[0][1];
+      entries.forEach(([aesthetic, pct], i) => {
+        const n = i + 1;
+        const color = COLORS[aesthetic] || '#888';
+        document.getElementById(`name-${n}`).textContent = aesthetic.toUpperCase();
+        document.getElementById(`score-${n}`).innerHTML = `${Math.round(pct)}<span>%</span>`;
+        document.getElementById(`score-${n}`).style.color = color;
+        document.getElementById(`box-${n}`).style.setProperty('--accent', color);
+        document.getElementById(`bar-${n}`).style.background = color;
+        document.getElementById(`bar-${n}`).dataset.pct = (pct / maxRaw) * 100;
+      });
+    }
+
+    function animateBars() {
+      for (let i = 1; i <= 8; i++) {
+        const bar = document.getElementById(`bar-${i}`);
+        if (bar) bar.style.width = bar.dataset.pct + '%';
+      }
+    }
+
+    function renderUMAP(data, scoreData) {
+      const scores = scoreData.scores;
+      const top3 = Object.keys(scores).slice(0, 3);
+      const traces = [];
+      const centroidMap = {};
+      data.centroids.forEach(c => { centroidMap[c.aesthetic] = c; });
+
+      top3.forEach((aesthetic, i) => {
+        const c = centroidMap[aesthetic];
+        if (!c) return;
+        const color = COLORS[aesthetic] || '#888';
+        traces.push({
+          type: 'scatter3d', mode: 'lines',
+          name: `_line_${i}`, showlegend: false,
+          x: [data.user.x, c.x], y: [data.user.y, c.y], z: [data.user.z, c.z],
+          line: { color, width: i === 0 ? 2.5 : 1.5, dash: i === 0 ? 'solid' : 'dot' },
+          hoverinfo: 'skip',
+        });
+      });
+
+      traces.push({
+        type: 'scatter3d', mode: 'markers+text',
+        name: 'Aesthetics',
+        x: data.centroids.map(c => c.x),
+        y: data.centroids.map(c => c.y),
+        z: data.centroids.map(c => c.z),
+        text: data.centroids.map(c => c.aesthetic),
+        textposition: 'top center',
+        textfont: { size: 8, color: '#6B6560' },
+        marker: {
+          size: data.centroids.map(c => top3.includes(c.aesthetic) ? 9 : 5),
+          color: data.centroids.map(c => COLORS[c.aesthetic] || '#888'),
+          symbol: 'circle',
+          opacity: data.centroids.map(c => top3.includes(c.aesthetic) ? 0.9 : 0.4),
+          line: {
+            width: data.centroids.map(c => top3.includes(c.aesthetic) ? 1.5 : 0),
+            color: data.centroids.map(c => top3.includes(c.aesthetic) ? '#1A1815' : 'transparent'),
+          }
+        },
+        hovertemplate: '%{text}<extra></extra>',
+      });
+
+      traces.push({
+        type: 'scatter3d', mode: 'markers',
+        name: '_yglow', showlegend: false,
+        x: [data.user.x], y: [data.user.y], z: [data.user.z],
+        marker: { size: 22, color: COLORS[topAesthetic] || '#888', opacity: 0.12, symbol: 'circle' },
+        hoverinfo: 'skip',
+      });
+
+      traces.push({
+        type: 'scatter3d', mode: 'markers+text',
+        name: 'You',
+        x: [data.user.x], y: [data.user.y], z: [data.user.z],
+        text: ['YOU'],
+        textposition: 'top center',
+        textfont: { size: 10, color: '#1A1815' },
+        marker: {
+          size: 11, color: '#1A1815', symbol: 'cross',
+          opacity: 1, line: { width: 2.5, color: COLORS[topAesthetic] || '#888' }
+        },
+        hovertemplate: 'Your position<extra></extra>',
+      });
+
+      Plotly.newPlot('umap-plot', traces, {
+        paper_bgcolor: '#F5F0E8',
+        plot_bgcolor: '#F5F0E8',
+        scene: {
+          bgcolor: '#F5F0E8',
+          xaxis: { showgrid: true, gridcolor: '#E0DAD0', zeroline: false, showticklabels: false, title: '', showspikes: false },
+          yaxis: { showgrid: true, gridcolor: '#E0DAD0', zeroline: false, showticklabels: false, title: '', showspikes: false },
+          zaxis: { showgrid: true, gridcolor: '#E0DAD0', zeroline: false, showticklabels: false, title: '', showspikes: false },
+          camera: { eye: { x: 1.4, y: 1.4, z: 0.9 } },
+        },
+        legend: { font: { color: '#A8A29C', size: 8 }, bgcolor: 'rgba(0,0,0,0)' },
+        margin: { l:0, r:0, t:0, b:0 },
+      }, { responsive: true, displayModeBar: false, scrollZoom: true });
+    }
+
+    async function renderMoodboard(aesthetic) {
+      const container = document.getElementById('moodboard');
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:0.7rem;letter-spacing:0.1em;padding:1rem 0;">Loading...</div>';
+
+      try {
+        const query = aesthetic.replace(/-/g, ' ');
+        const res = await fetch(
+          `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query + ' aesthetic')}&per_page=4&orientation=portrait`,
+          { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } }
+        );
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-dim);font-size:0.7rem;">No images found.</div>';
+          return;
+        }
+
+        container.innerHTML = data.results.map(photo => `
+          <a href="${photo.links.html}?utm_source=kansei&utm_medium=referral" target="_blank">
+            <img src="${photo.urls.small}" alt="${photo.alt_description || aesthetic}" loading="lazy" />
+          </a>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<div style="color:var(--text-dim);font-size:0.7rem;">Could not load images.</div>';
+      }
+    }
+
+    function renderShareCard(data) {
+      document.getElementById('sc-title').textContent = capitalize(data.top);
+      document.getElementById('sc-title').style.color = COLORS[data.top] || '#1A1815';
+      document.getElementById('sc-word').textContent = DESCRIPTORS[data.top] || '';
+      document.getElementById('sc-desc').textContent = data.description;
+      const top3 = Object.entries(data.scores).slice(0, 3);
+      document.getElementById('sc-scores').innerHTML = top3.map(([a, pct]) => `
+        <div>
+          <div class="share-score-name">${a}</div>
+          <div class="share-score-val" style="color:${COLORS[a] || '#888'}">${Math.round(pct)}%</div>
+        </div>
+      `).join('');
+    }
+
+    async function downloadCard() {
+      const btn = document.querySelector('.action-btn.primary');
+      btn.textContent = 'Generating...';
+      const card = document.getElementById('share-card');
+      card.style.left = '0';
+      try {
+        const canvas = await html2canvas(card, {
+          backgroundColor: '#F5F0E8', scale: 2, useCORS: true, logging: false,
+        });
+        card.style.left = '-9999px';
+        const link = document.createElement('a');
+        link.download = `kansei-${topAesthetic.replace(/ /g, '-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch { card.style.left = '-9999px'; }
+      btn.textContent = 'Save card ↓';
+    }
+
+    function copyResult() {
+      navigator.clipboard.writeText(`My Kansei aesthetic: ${capitalize(topAesthetic)}`).then(() => {
+        const btn = document.querySelector('.action-btn:not(.primary)');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
+    }
+
+    function capitalize(str) {
+      return str.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    main();
+  </script>
+</body>
+</html>
