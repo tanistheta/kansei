@@ -32,10 +32,11 @@ app.add_middleware(
 )
 
 BASE = Path(__file__).parent.parent
+IMAGES_DIR = BASE / "images" if (BASE / "images").exists() else Path(__file__).parent / "images"
+FRONTEND_DIR = BASE / "frontend" if (BASE / "frontend").exists() else Path(__file__).parent / "frontend"
 
-app.mount("/images", StaticFiles(directory=BASE / "images"), name="images")
-app.mount("/static", StaticFiles(directory=BASE / "frontend"), name="static")
-
+app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 @app.on_event("startup")
 async def startup():
@@ -50,19 +51,19 @@ async def startup():
 
 @app.get("/")
 def index():
-    return FileResponse(BASE / "frontend" / "index.html")
+    return FileResponse(FRONTEND_DIR  / "index.html")
 
 @app.get("/quiz")
 def quiz():
-    return FileResponse(BASE / "frontend" / "quiz.html")
+    return FileResponse(FRONTEND_DIR / "quiz.html")
 
 @app.get("/explore")
 def explore():
-    return FileResponse(BASE / "frontend" / "explore.html")
+    return FileResponse(FRONTEND_DIR / "explore.html")
 
 @app.get("/result")
 def result():
-    return FileResponse(BASE / "frontend" / "result.html")
+    return FileResponse(FRONTEND_DIR  / "result.html")
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
