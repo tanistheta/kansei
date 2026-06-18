@@ -14,147 +14,191 @@
       --text-primary: #1A1815;
       --text-secondary: #6B6560;
       --text-dim: #A8A29C;
-      --accent: #E8E0D0;
     }
 
     body {
-      position: relative;
       background: var(--bg);
       color: var(--text-primary);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
     }
 
+    /* Grain */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 100;
-      opacity: 0.055;
+      opacity: 0.06;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
       background-repeat: repeat;
       background-size: 128px 128px;
-      min-height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      padding: 2.5rem 2rem;
     }
 
+    /* Nav */
     nav {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
+      padding: 2rem 3rem;
+      border-bottom: 1px solid var(--border);
     }
 
     .logo {
-      font-size: 0.8rem;
-      letter-spacing: 0.25em;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
       color: var(--text-secondary);
     }
 
-    .nav-meta {
-      font-size: 0.62rem;
-      letter-spacing: 0.15em;
+    .nav-right {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
       color: var(--text-dim);
+      text-transform: uppercase;
     }
 
+    /* Main layout */
     main {
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: calc(100vh - 65px);
+    }
+
+    /* Left — hero */
+    .hero {
+      padding: 5rem 3rem 4rem;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      padding: 5rem 0 3rem;
+      justify-content: space-between;
+      border-right: 1px solid var(--border);
     }
 
-    .tagline {
-      font-size: 0.62rem;
+    .hero-top {}
+
+    .hero-tag {
+      font-size: 0.58rem;
       letter-spacing: 0.35em;
       text-transform: uppercase;
       color: var(--text-dim);
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
     }
 
     h1 {
-      font-size: clamp(4rem, 12vw, 9rem);
+      font-size: clamp(4.5rem, 8vw, 8rem);
       font-weight: 800;
       letter-spacing: -0.05em;
-      line-height: 0.9;
+      line-height: 0.88;
       color: var(--text-primary);
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
     }
 
-    .sub {
+    .hero-sub {
       font-size: 0.95rem;
       color: var(--text-secondary);
-      line-height: 1.65;
-      max-width: 440px;
-      margin-bottom: 4rem;
+      line-height: 1.7;
+      max-width: 380px;
     }
 
-    .entries {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 3px;
-      max-width: 680px;
+    .hero-bottom {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
     }
 
-    .entry {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 2rem;
-      cursor: pointer;
-      text-decoration: none;
+    .hero-stat {
       display: flex;
       flex-direction: column;
-      gap: 0.8rem;
-      transition: border-color 0.2s, background 0.2s;
-      position: relative;
-      overflow: hidden;
+      gap: 0.2rem;
     }
 
-    .entry:hover {
-      border-color: #333;
-      background: #161412;
-    }
-
-    .entry-icon {
-      font-size: 1.2rem;
-      color: var(--text-secondary);
-    }
-
-    .entry-title {
-      font-size: 0.9rem;
-      font-weight: 600;
+    .stat-num {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
       color: var(--text-primary);
-      letter-spacing: -0.01em;
+      line-height: 1;
     }
 
-    .entry-desc {
-      font-size: 0.72rem;
-      color: var(--text-secondary);
-      line-height: 1.55;
-    }
-
-    .entry-action {
-      font-size: 0.6rem;
+    .stat-label {
+      font-size: 0.55rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--text-dim);
-      margin-top: auto;
-      padding-top: 1rem;
     }
 
-    .entry-upload.dragover {
-      border-color: #444;
-      background: #161412;
+    .stat-divider {
+      width: 1px;
+      height: 2rem;
+      background: var(--border);
     }
 
-    .upload-state {
+    /* Right — entry cards */
+    .entries {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .entry {
+      flex: 1;
+      padding: 3.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .entry:last-child { border-bottom: none; }
+    .entry:hover { background: var(--surface); }
+
+    .entry-num {
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+    }
+
+    .entry-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin-bottom: 0.8rem;
+      line-height: 1.1;
+    }
+
+    .entry-desc {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 320px;
+    }
+
+    .entry-arrow {
+      position: absolute;
+      bottom: 2.5rem;
+      right: 2.5rem;
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      transition: transform 0.2s, color 0.2s;
+    }
+
+    .entry:hover .entry-arrow {
+      transform: translate(3px, -3px);
+      color: var(--text-secondary);
+    }
+
+    /* Upload state */
+    .upload-overlay {
       display: none;
       position: absolute;
       inset: 0;
@@ -162,13 +206,13 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      gap: 0.8rem;
+      gap: 1rem;
     }
-    .upload-state.active { display: flex; }
+    .upload-overlay.active { display: flex; }
 
     .upload-spinner {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       border: 1px solid var(--border);
       border-top-color: var(--text-secondary);
       border-radius: 50%;
@@ -176,29 +220,42 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .upload-label {
+    .upload-text {
       font-size: 0.62rem;
       letter-spacing: 0.2em;
       color: var(--text-dim);
+      text-transform: uppercase;
     }
 
     #file-input { display: none; }
 
+    /* Drag state */
+    .entry-upload.dragover { background: var(--surface); }
+    .entry-upload.dragover .entry-arrow { color: var(--text-secondary); }
+
+    /* Footer */
     footer {
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 2rem;
+      padding: 1.2rem 3rem;
       border-top: 1px solid var(--border);
     }
 
-    .footer-meta {
-      font-size: 0.6rem;
+    .footer-text {
+      font-size: 0.55rem;
       letter-spacing: 0.15em;
       color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 700px) {
+      main { grid-template-columns: 1fr; min-height: auto; }
+      .hero { border-right: none; border-bottom: 1px solid var(--border); padding: 3rem 1.5rem 2.5rem; }
+      h1 { font-size: 4rem; }
+      .entry { padding: 2.5rem 1.5rem; }
+      nav { padding: 1.5rem; }
+      footer { padding: 1rem 1.5rem; flex-direction: column; gap: 0.4rem; }
     }
   </style>
 </head>
@@ -206,63 +263,74 @@
 
   <nav>
     <span class="logo">◈ KANSEI</span>
-    <span class="nav-meta">感性 · aesthetic intelligence</span>
+    <span class="nav-right"><a href="/explore" style="color:var(--text-dim);text-decoration:none;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--border);padding:0.4rem 1rem;transition:color 0.2s" onmouseover="this.style.color='var(--text-secondary)'" onmouseout="this.style.color='var(--text-dim)'">Explore</a></span>
   </nav>
 
   <main>
-    <p class="tagline">What pulls you in?</p>
-    <h1>Kansei</h1>
-    <p class="sub">
-      Discover your aesthetic identity through image choices —
-      or drop any photo to instantly classify its visual DNA across 16 aesthetics.
-    </p>
-
-    <div class="entries">
-      <a class="entry" href="/quiz">
-        <span class="entry-icon">◈</span>
-        <div class="entry-title">Take the quiz</div>
-        <div class="entry-desc">
-          25 image pairs. Choose what pulls you in.
-          Your choices build your aesthetic fingerprint.
+    <!-- Left: Hero -->
+    <div class="hero">
+      <div class="hero-top">
+        <p class="hero-tag">What pulls you in?</p>
+        <h1>Know your aesthetic.</h1>
+        <p class="hero-sub">
+          25 image pairs reveal your visual identity across 16 distinct aesthetics — or drop any photo for an instant read.
+        </p>
+      </div>
+      <div class="hero-bottom">
+        <div class="hero-stat">
+          <span class="stat-num">16</span>
+          <span class="stat-label">Aesthetics</span>
         </div>
-        <div class="entry-action">Begin →</div>
-      </a>
-
-      <div class="entry entry-upload" id="upload-zone">
-        <span class="entry-icon">↑</span>
-        <div class="entry-title">Classify an image</div>
-        <div class="entry-desc">
-          Drop any photo — a room, outfit, artwork, or screenshot.
-          CLIP reads its visual DNA instantly.
+        <div class="stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-num">25</span>
+          <span class="stat-label">Pairs</span>
         </div>
-        <div class="entry-action">Drop image or click →</div>
-        <div class="upload-state" id="upload-state">
-          <div class="upload-spinner"></div>
-          <div class="upload-label">Classifying...</div>
+        <div class="stat-divider"></div>
+        <div class="hero-stat">
+          <span class="stat-num">CLIP</span>
+          <span class="stat-label">Model</span>
         </div>
       </div>
     </div>
 
-    <input type="file" id="file-input" accept="image/*" />
+    <!-- Right: Entries -->
+    <div class="entries">
+      <a class="entry" href="/quiz">
+        <span class="entry-num">01</span>
+        <div class="entry-title">Take the quiz</div>
+        <p class="entry-desc">Choose between image pairs. Your choices are encoded by CLIP and mapped against 16 aesthetic centroids in embedding space.</p>
+        <span class="entry-arrow">↗</span>
+      </a>
+
+      <div class="entry entry-upload" id="upload-zone">
+        <span class="entry-num">02</span>
+        <div class="entry-title">Classify an image</div>
+        <p class="entry-desc">Drop any photo — a room, outfit, artwork, screenshot. CLIP reads its visual DNA and maps it instantly across all 16 aesthetics.</p>
+        <span class="entry-arrow">↑</span>
+        <div class="upload-overlay" id="upload-overlay">
+          <div class="upload-spinner"></div>
+          <span class="upload-text">Classifying...</span>
+        </div>
+      </div>
+    </div>
   </main>
 
   <footer>
-    <span class="footer-meta">CLIP · UMAP · 16 aesthetics · 102 images</span>
-    <span class="footer-meta">v1.0</span>
+    <span class="footer-text">CLIP · UMAP · 16 Aesthetics · 102 Images</span>
+    <span class="footer-text">v1.0 · 2026</span>
   </footer>
 
+  <input type="file" id="file-input" accept="image/*" />
+
   <script>
-    const API = 'http://127.0.0.1:8000';
+    const API = '';
     const zone = document.getElementById('upload-zone');
     const fileInput = document.getElementById('file-input');
-    const uploadState = document.getElementById('upload-state');
+    const overlay = document.getElementById('upload-overlay');
 
     zone.addEventListener('click', () => fileInput.click());
-
-    zone.addEventListener('dragover', e => {
-      e.preventDefault();
-      zone.classList.add('dragover');
-    });
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
     zone.addEventListener('drop', e => {
       e.preventDefault();
@@ -270,33 +338,23 @@
       const file = e.dataTransfer.files[0];
       if (file && file.type.startsWith('image/')) classify(file);
     });
-
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files[0]) classify(fileInput.files[0]);
-    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) classify(fileInput.files[0]); });
 
     async function classify(file) {
-      uploadState.classList.add('active');
-
-      // Store image as base64 for display on result page
+      overlay.classList.add('active');
       const reader = new FileReader();
       reader.onload = async () => {
         sessionStorage.setItem('kansei_uploaded_image', reader.result);
-
         const formData = new FormData();
         formData.append('file', file);
-
         try {
-          const res = await fetch(`${API}/api/classify`, {
-            method: 'POST',
-            body: formData,
-          });
+          const res = await fetch(`${API}/api/classify`, { method: 'POST', body: formData });
           const data = await res.json();
           sessionStorage.setItem('kansei_classify_result', JSON.stringify(data));
           sessionStorage.setItem('kansei_source', 'classify');
           window.location.href = '/result';
-        } catch (err) {
-          uploadState.classList.remove('active');
+        } catch {
+          overlay.classList.remove('active');
           alert('Something went wrong. Make sure the server is running.');
         }
       };

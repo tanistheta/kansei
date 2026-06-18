@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kansei · Explore</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F0E8;
+      --surface: #EDE8DF;
+      --border: #D4CEC4;
+      --text-primary: #1A1815;
+      --text-secondary: #6B6560;
+      --text-dim: #A8A29C;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.055;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 128px 128px;
+    }
+
+    /* Nav */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2rem 3rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(245,240,232,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+    }
+    .logo {
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .nav-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .nav-link {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 0.4rem 1rem;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .nav-link:hover { color: var(--text-secondary); border-color: #aaa; }
+
+    /* Page header */
+    .page-header {
+      padding: 4rem 3rem 3rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .page-header-left {}
+    .page-tag {
+      font-size: 0.58rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1rem;
+    }
+    .page-title {
+      font-size: clamp(2.5rem, 5vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 0.92;
+      color: var(--text-primary);
+    }
+    .page-sub {
+      margin-top: 1.2rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 400px;
+    }
+    .page-count {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      white-space: nowrap;
+      padding-bottom: 0.4rem;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+      max-width: 1100px;
+      margin: 0 auto 2.5rem;
+      padding: 0 3rem;
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      font-size: 0.55rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      background: none;
+      padding: 0.35rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-btn:hover { color: var(--text-secondary); border-color: #aaa; }
+    .filter-btn.active {
+      color: var(--text-primary);
+      border-color: var(--text-primary);
+      background: var(--text-primary);
+      color: var(--bg);
+    }
+
+    /* Grid */
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 3rem 5rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    /* Aesthetic card */
+    .acard {
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s;
+    }
+    .acard:hover { background: var(--surface); }
+
+    .acard-img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      display: block;
+      filter: grayscale(12%);
+      transition: filter 0.4s, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .acard:hover .acard-img {
+      filter: grayscale(0%);
+      transform: scale(1.03);
+    }
+
+    .acard-img-wrap {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .acard-color-bar {
+      height: 2px;
+      width: 100%;
+      transition: height 0.2s;
+    }
+    .acard:hover .acard-color-bar { height: 3px; }
+
+    .acard-body {
+      padding: 1.2rem 1.2rem 1.4rem;
+    }
+    .acard-name {
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .acard-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .acard-word {
+      margin-top: 0.8rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,24,21,0.55);
+      z-index: 200;
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--bg);
+      max-width: 860px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+    }
+
+    .modal-images {
+      display: grid;
+      grid-template-rows: 2fr 1fr 1fr;
+      gap: 2px;
+      background: var(--border);
+      max-height: 90vh;
+      overflow: hidden;
+    }
+    .modal-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: grayscale(8%);
+    }
+
+    .modal-body {
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .modal-close:hover { color: var(--text-secondary); border-color: #aaa; }
+
+    .modal-color-bar {
+      height: 3px;
+      width: 40px;
+      margin-bottom: 1.5rem;
+    }
+    .modal-name {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .modal-word {
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 1.5rem;
+    }
+    .modal-desc {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 2rem;
+    }
+    .modal-personality {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      font-style: italic;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .modal-cta {
+      margin-top: auto;
+      padding-top: 2rem;
+    }
+    .modal-cta-btn {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.6rem 1.5rem;
+      background: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .modal-cta-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--text-primary);
+    }
+
+    /* No images fallback */
+    .acard-placeholder {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .placeholder-symbol {
+      font-size: 2rem;
+      color: var(--border);
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(3, 1fr); padding: 0 1.5rem 3rem; }
+      .filter-bar { padding: 0 1.5rem; }
+      .page-header { padding: 2.5rem 1.5rem 2rem; }
+      nav { padding: 1.5rem; }
+    }
+
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: repeat(2, 1fr); padding: 0 1rem 3rem; }
+      .filter-bar { padding: 0 1rem; }
+      .page-header { padding: 2rem 1rem 1.5rem; flex-direction: column; align-items: flex-start; }
+      .modal { grid-template-columns: 1fr; }
+      .modal-images { grid-template-rows: auto; grid-template-columns: 1fr 1fr 1fr; max-height: 200px; }
+      .modal-body { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="logo" href="/">◈ KANSEI</a>
+    <div class="nav-actions">
+      <a class="nav-link" href="/quiz">Take quiz</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <p class="page-tag">All aesthetics</p>
+      <h1 class="page-title">Explore.</h1>
+      <p class="page-sub">16 distinct aesthetic worlds. Each one a different way of seeing — click any to go deeper.</p>
+    </div>
+    <div class="page-count">16 aesthetics · CLIP-mapped</div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="warm">Warm</button>
+    <button class="filter-btn" data-filter="cool">Cool</button>
+    <button class="filter-btn" data-filter="dark">Dark</button>
+    <button class="filter-btn" data-filter="nature">Nature</button>
+    <button class="filter-btn" data-filter="tech">Tech</button>
+  </div>
+
+  <div class="grid" id="grid">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" id="modal">
+      <button class="modal-close" id="modal-close">✕ Close</button>
+      <div class="modal-images" id="modal-images"></div>
+      <div class="modal-body">
+        <div class="modal-color-bar" id="modal-color-bar"></div>
+        <div class="modal-name" id="modal-name">—</div>
+        <div class="modal-word" id="modal-word">—</div>
+        <div class="modal-desc" id="modal-desc">—</div>
+        <div class="modal-personality" id="modal-personality">—</div>
+        <div class="modal-cta">
+          <a class="modal-cta-btn" href="/quiz">Find your aesthetic →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+
+    const AESTHETICS = [
+      { name: "afrofuturism",       color: "#9B59B6", word: "Cosmic",          tags: ["dark", "tech"] },
+      { name: "boho",               color: "#E67E22", word: "Wandering",       tags: ["warm", "nature"] },
+      { name: "brutalism",          color: "#7F8C8D", word: "Uncompromising",  tags: ["cool", "dark"] },
+      { name: "coastal cool",       color: "#3498DB", word: "Effortless",      tags: ["cool", "nature"] },
+      { name: "cottagecore",        color: "#4A8A5A", word: "Tender",          tags: ["warm", "nature"] },
+      { name: "cyber minimalism",   color: "#00CED1", word: "Precise",         tags: ["cool", "tech"] },
+      { name: "cyberpunk",          color: "#CC00CC", word: "Fractured",       tags: ["dark", "tech"] },
+      { name: "dark academia",      color: "#8B6914", word: "Searching",       tags: ["dark", "warm"] },
+      { name: "ethereal",           color: "#7A5A9A", word: "Dissolving",      tags: ["cool"] },
+      { name: "glam maximalism",    color: "#A07800", word: "Abundant",        tags: ["warm", "dark"] },
+      { name: "quiet luxury",       color: "#5A5550", word: "Restrained",      tags: ["cool", "dark"] },
+      { name: "solarpunk",          color: "#2ECC71", word: "Hopeful",         tags: ["warm", "nature", "tech"] },
+      { name: "teracotta modernism",color: "#C86040", word: "Grounded",        tags: ["warm", "nature"] },
+      { name: "vintage americana",  color: "#C84040", word: "Nostalgic",       tags: ["warm", "dark"] },
+      { name: "wabi sabi",          color: "#7A6A50", word: "Accepting",       tags: ["warm", "nature"] },
+      { name: "zen modern",         color: "#708090", word: "Still",           tags: ["cool"] },
+    ];
+
+    const DESCRIPTIONS = {
+      "afrofuturism": "Bold, cosmic, rooted in African tradition and speculative futures.",
+      "boho": "Free-spirited, layered, earthy with a wanderer's soul.",
+      "brutalism": "Raw, honest, unapologetic — concrete and shadow.",
+      "coastal cool": "Effortless, sun-bleached, salt-air calm.",
+      "cottagecore": "Soft, pastoral, handmade warmth in a quiet world.",
+      "cyber minimalism": "Cold precision, stripped to system — function as form.",
+      "cyberpunk": "Neon and rain, high tech low life, beautiful decay.",
+      "dark academia": "Candlelit libraries, antiquity, the romance of learning.",
+      "ethereal": "Soft light, translucent layers, existing between worlds.",
+      "glam maximalism": "More is more — opulent, theatrical, unapologetically excessive.",
+      "quiet luxury": "Understated wealth, timeless quality, nothing to prove.",
+      "solarpunk": "Hopeful futures, community gardens, sun through green leaves.",
+      "teracotta modernism": "Warm clay, curved walls, desert light and organic form.",
+      "vintage americana": "Open highways, neon diners, nostalgia for a simpler time.",
+      "wabi sabi": "Beauty in imperfection, transience, the worn and the weathered.",
+      "zen modern": "Stillness as design — wood, light, intentional emptiness.",
+    };
+
+    const PERSONALITIES = {
+      "afrofuturism": "You exist at the intersection of memory and possibility. Your aesthetic sensibility pulls toward the mythic — richness, power, and a future that doesn't erase where it came from.",
+      "boho": "You move through the world collecting rather than curating. Your taste is eclectic in the truest sense — not assembled, but accumulated through curiosity.",
+      "brutalism": "You have a deep tolerance for honesty. You prefer things that show what they're made of — no ornament, no apology.",
+      "coastal cool": "Your ideal state is unhurried. You're drawn to environments that feel inevitable rather than designed — salt, sun, texture worn smooth by water.",
+      "cottagecore": "You find the domestic sacred. The small rituals of everyday life — a jar of dried flowers, bread rising, rain on a window — carry real meaning for you.",
+      "cyber minimalism": "You think in systems. Your aesthetic strips away everything that isn't load-bearing — what remains is precise, cold, and intentional.",
+      "cyberpunk": "You're drawn to beauty that's slightly broken. Neon through rain, the human thing persisting in an inhuman world.",
+      "dark academia": "You romanticize the pursuit of knowledge. Candlelit libraries, worn leather, the smell of old paper — these aren't just aesthetics, they're emotional states.",
+      "ethereal": "You're drawn to thresholds — light that's just fading, things that exist at the edge of definition. Softness as a form of strength.",
+      "glam maximalism": "You believe more is a statement. Your aesthetic is theatrical, deliberate, unapologetically excessive — not as a failure of restraint but as a celebration.",
+      "quiet luxury": "You understand that the most powerful things don't announce themselves. Restraint, for you, is a form of confidence.",
+      "solarpunk": "You're oriented toward the possible. Warm and communal — drawn to futures that feel livable, to the beauty of things that grow.",
+      "teracotta modernism": "You're drawn to warmth that has weight. Organic forms, clay tones, materials that carry the trace of their making.",
+      "vintage americana": "You're nostalgic for a version of the world that felt open. Open roads, neon signs, the particular optimism of mid-century America.",
+      "wabi sabi": "You've made peace with impermanence. Your aesthetic finds beauty precisely where others see flaws — the crack in the glaze, the weathered wood.",
+      "zen modern": "You design your world around silence. Empty space, single objects chosen with care, light that does the work.",
+    };
+
+    // Image pool from server — populated at init
+    let imagePool = {};
+    let currentFilter = 'all';
+
+    const STAMPS = {
+      'quiet luxury':'◇','dark academia':'✦','ethereal':'✧',
+      'cyberpunk':'⚡','cottagecore':'✿','brutalism':'▪',
+      'boho':'◎','afrofuturism':'✶','solarpunk':'☀',
+      'wabi sabi':'○','zen modern':'□','coastal cool':'◌',
+      'vintage americana':'★','glam maximalism':'◆',
+      'teracotta modernism':'◉','cyber minimalism':'▸',
+    };
+
+    async function init() {
+      // Load image pool from API
+      try {
+        const res = await fetch(`${API}/api/pairs?n=1`);
+        // We just need the image pool — fetch aesthetics list
+        // Use a trick: hit /api/aesthetics to get names confirmed
+      } catch(e) {}
+
+      renderGrid(currentFilter);
+      setupFilters();
+    }
+
+    function capitalize(str) {
+      return str.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    function renderGrid(filter) {
+      const grid = document.getElementById('grid');
+      const filtered = filter === 'all'
+        ? AESTHETICS
+        : AESTHETICS.filter(a => a.tags.includes(filter));
+
+      grid.innerHTML = filtered.map(a => {
+        const imgUrl = `${API}/images/${encodeURIComponent(a.name)}/`;
+        return `
+          <div class="acard" data-name="${a.name}" onclick="openModal('${a.name}')">
+            <div class="acard-img-wrap">
+              <img class="acard-img"
+                src="${API}/images/${encodeURIComponent(a.name)}/${getFirstImage(a.name)}"
+                alt="${a.name}"
+                loading="lazy"
+                onerror="this.parentElement.innerHTML='<div class=\\'acard-placeholder\\'><span class=\\'placeholder-symbol\\'>${STAMPS[a.name] || '◈'}</span></div>'"
+              />
+            </div>
+            <div class="acard-color-bar" style="background:${a.color}"></div>
+            <div class="acard-body">
+              <div class="acard-name">${a.name}</div>
+              <div class="acard-desc">${DESCRIPTIONS[a.name] || ''}</div>
+              <div class="acard-word">${a.word}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // We don't know filenames without hitting the server — use a known pattern
+    // from the embeddings. For now, try loading the image and fall back gracefully.
+    // The actual first image will load or fall back to placeholder.
+    function getFirstImage(aesthetic) {
+      // Will fail gracefully via onerror if unknown; server serves directory
+      return ''; // triggers onerror → placeholder until we fetch
+    }
+
+    // Fetch real image lists from the proper endpoint
+    async function preloadImages() {
+      try {
+        const results = await Promise.all(
+          AESTHETICS.map(a =>
+            fetch(`${API}/api/images/${encodeURIComponent(a.name)}`).then(r => r.json())
+          )
+        );
+        results.forEach(data => {
+          if (data.images && data.images.length > 0) {
+            imagePool[data.aesthetic] = data.images;
+          }
+        });
+
+        // Update card images with real filenames
+        document.querySelectorAll('.acard').forEach(card => {
+          const name = card.dataset.name;
+          const imgs = imagePool[name];
+          if (imgs && imgs.length > 0) {
+            const imgEl = card.querySelector('.acard-img');
+            if (imgEl) imgEl.src = `${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(imgs[0])}`;
+          }
+        });
+      } catch(e) {}
+    }
+
+    function openModal(name) {
+      const a = AESTHETICS.find(x => x.name === name);
+      if (!a) return;
+
+      document.getElementById('modal-name').textContent = capitalize(name);
+      document.getElementById('modal-name').style.color = a.color;
+      document.getElementById('modal-word').textContent = a.word;
+      document.getElementById('modal-desc').textContent = DESCRIPTIONS[name] || '';
+      document.getElementById('modal-personality').textContent = PERSONALITIES[name] || '';
+      document.getElementById('modal-color-bar').style.background = a.color;
+
+      // Modal images — show up to 3 from pool
+      const imgs = imagePool[name] || [];
+      const imgContainer = document.getElementById('modal-images');
+
+      if (imgs.length >= 3) {
+        imgContainer.innerHTML = imgs.slice(0, 3).map((img, i) => `
+          <img class="modal-img" src="${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(img)}" alt="${name}" loading="lazy" />
+        `).join('');
+      } else if (imgs.length > 0) {
+        imgContainer.innerHTML = imgs.map(img => `
+          <img class="modal-img" src="${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(img)}" alt="${name}" loading="lazy" />
+        `).join('');
+      } else {
+        // No images loaded yet — show color placeholder
+        imgContainer.innerHTML = `
+          <div style="background:${a.color};opacity:0.2;display:flex;align-items:center;justify-content:center;font-size:3rem;color:${a.color}">
+            ${STAMPS[name] || '◈'}
+          </div>
+          <div style="background:var(--surface)"></div>
+          <div style="background:var(--surface)"></div>
+        `;
+      }
+
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('modal-backdrop').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function setupFilters() {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          renderGrid(currentFilter);
+          // Re-apply real images after re-render
+          document.querySelectorAll('.acard').forEach(card => {
+            const name = card.dataset.name;
+            const imgs = imagePool[name];
+            if (imgs && imgs.length > 0) {
+              const imgEl = card.querySelector('.acard-img');
+              if (imgEl) imgEl.src = `${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(imgs[0])}`;
+            }
+          });
+        });
+      });
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-backdrop').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal-backdrop')) closeModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    init().then(() => preloadImages());
+  </script>
+</body>
+</html>

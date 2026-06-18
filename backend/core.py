@@ -55,20 +55,23 @@ def load_data():
     image_pool = {}
     all_vectors = []
     all_labels = []
+    all_images = []  # track image filenames alongside vectors
 
     for aesthetic, info in raw.items():
         centroids[aesthetic] = np.array(info["centroid"])
-        image_pool[aesthetic] = [Path(p).name for p in info["images"]]
-        for v in info["vectors"]:
+        names = [p.replace('\\', '/').split('/')[-1] for p in info["images"]]
+        image_pool[aesthetic] = names
+        for i, v in enumerate(info["vectors"]):
             all_vectors.append(v)
             all_labels.append(aesthetic)
+            all_images.append(names[i] if i < len(names) else "")
 
-    return centroids, image_pool, np.array(all_vectors), all_labels
+    return centroids, image_pool, np.array(all_vectors), all_labels, all_images
 
 
 @lru_cache(maxsize=1)
 def get_reducer():
-    _, _, all_vectors, _ = load_data()
+    _, _, all_vectors, _, _ = load_data()
     reducer = umap_lib.UMAP(n_components=3, random_state=42, n_neighbors=5, min_dist=0.5)
     reducer.fit(all_vectors)
     return reducer
@@ -78,34 +81,163 @@ def cosine_similarity(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
-def score(user_vectors: list[list[float]]) -> dict:
-    centroids, _, _, _ = load_data()
-    user_vec = np.mean(user_vectors, axis=0)
+def score(
+    user_vectors: list[list[float]],
+    weights: list[float] | None = None
+) -> dict:
+    centroids, _, _, _, _ = load_data()
+
+    # Weighted mean — later choices carry more weight
+    vecs = np.array(user_vectors)
+    if weights is None:
+        n = len(vecs)
+        # Exponential decay: round 25 counts ~3x more than round 1
+        weights = np.exp(np.linspace(0, 1.1, n))
+    w = np.array(weights)
+    w = w / w.sum()
+    user_vec = np.average(vecs, axis=0, weights=w)
 
     raw = {a: cosine_similarity(user_vec, c) for a, c in centroids.items()}
-
-    # Shift to 0-based (cosine similarity is typically 0.7–1.0 for similar CLIP embeddings)
-    # Map actual range to 0–100 so numbers feel meaningful but top isn't always 100
     min_s = min(raw.values())
     max_s = max(raw.values())
     spread = max_s - min_s if max_s - min_s > 0 else 1
 
-    # Scale so top aesthetic is ~85-95%, not always 100%
-    # Use: score = min_possible + (raw - min_raw) / spread * range_width
-    range_width = 60  # top gets ~85%, bottom gets ~25%
-    base = 25
-    normalized = {
-        a: round(base + (s - min_s) / spread * range_width, 1)
-        for a, s in raw.items()
-    }
+    # Aggressive amplification: cube the relative position
+    # This creates a steep drop-off — top stays high, rest falls fast
+    normalized = {}
+    for a, s in raw.items():
+        relative = (s - min_s) / spread   # 0.0 to 1.0
+        amplified = relative ** 3          # cubic — top ~85%, second ~50%, rest drops sharply
+        normalized[a] = round(10 + amplified * 75, 1)
 
     return dict(sorted(normalized.items(), key=lambda x: x[1], reverse=True))
 
 
+def real_consistency(user_vectors: list[list[float]]) -> dict:
+    """
+    Compute true consistency as 1 - mean pairwise cosine distance.
+    Low variance = tight cluster = decisive. High variance = scattered = eclectic.
+    Returns score 0-100 and interpretation.
+    """
+    vecs = np.array(user_vectors)
+    if len(vecs) < 2:
+        return {"score": 100, "label": "Decisive", "desc": "Not enough choices to measure."}
+
+    # Normalize all vectors
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    vecs_norm = vecs / norms
+
+    # Mean pairwise cosine similarity
+    sim_matrix = vecs_norm @ vecs_norm.T
+    n = len(vecs)
+    upper = sim_matrix[np.triu_indices(n, k=1)]
+    mean_sim = float(np.mean(upper))
+
+    # Map to 0-100: mean_sim typically 0.7-1.0
+    # 1.0 = perfectly consistent (100%), 0.7 = very scattered (0%)
+    score_val = round(max(0, min(100, (mean_sim - 0.70) / 0.30 * 100)), 1)
+
+    if score_val >= 80:
+        label = "Decisive"
+        desc = "Your choices clustered tightly — you know exactly what you want."
+    elif score_val >= 55:
+        label = "Eclectic"
+        desc = "Your taste draws from multiple aesthetics without losing a center of gravity."
+    elif score_val >= 35:
+        label = "Wandering"
+        desc = "You move between contrasting worlds — contradiction is part of your aesthetic."
+    else:
+        label = "Undefined"
+        desc = "Your choices span the full aesthetic spectrum. You resist easy categorization."
+
+    return {"score": score_val, "label": label, "desc": desc}
+
+
+def rejection_analysis(choices: list[dict]) -> dict:
+    """
+    Analyze rejected aesthetics from quiz choices.
+    Each choice: {"chosen": "aesthetic_name", "rejected": "aesthetic_name"}
+    Returns rejection counts, most avoided, and never chosen.
+    """
+    _, image_pool, _, _, _ = load_data()
+    all_aesthetics = set(image_pool.keys())
+
+    rejection_counts = {a: 0 for a in all_aesthetics}
+    chosen_counts = {a: 0 for a in all_aesthetics}
+
+    for c in choices:
+        chosen = c.get("chosen", "")
+        rejected = c.get("rejected", "")
+        if chosen in chosen_counts:
+            chosen_counts[chosen] += 1
+        if rejected in rejection_counts:
+            rejection_counts[rejected] += 1
+
+    # Sort by rejection count
+    sorted_rejected = sorted(rejection_counts.items(), key=lambda x: x[1], reverse=True)
+
+    # Never chosen aesthetics
+    never_chosen = [a for a, cnt in chosen_counts.items() if cnt == 0]
+
+    # Most avoided = high rejections + low chosen
+    avoidance_score = {
+        a: rejection_counts[a] - chosen_counts[a]
+        for a in all_aesthetics
+    }
+    most_avoided = sorted(avoidance_score.items(), key=lambda x: x[1], reverse=True)[:3]
+    most_avoided = [(a, s) for a, s in most_avoided if s > 0]
+
+    return {
+        "rejection_counts": dict(sorted_rejected),
+        "chosen_counts": chosen_counts,
+        "never_chosen": never_chosen,
+        "most_avoided": most_avoided,
+        "top_rejected": sorted_rejected[:3],
+    }
+
+
+def nearest_images(user_vectors: list[list[float]], k: int = 5) -> list[dict]:
+    """
+    kNN: find the k most similar individual images to the user's mean vector.
+    Returns image filename, aesthetic label, and similarity score.
+    """
+    _, _, all_vectors, all_labels, all_images = load_data()
+
+    vecs = np.array(user_vectors)
+    n = len(vecs)
+    weights = np.exp(np.linspace(0, 1.1, n))
+    weights = weights / weights.sum()
+    user_vec = np.average(vecs, axis=0, weights=weights)
+
+    # Normalize
+    user_vec_norm = user_vec / np.linalg.norm(user_vec)
+    all_vecs_norm = all_vectors / np.linalg.norm(all_vectors, axis=1, keepdims=True)
+
+    similarities = all_vecs_norm @ user_vec_norm
+
+    top_k_idx = np.argsort(similarities)[::-1][:k]
+
+    results = []
+    for idx in top_k_idx:
+        results.append({
+            "image": all_images[idx],
+            "aesthetic": all_labels[idx],
+            "similarity": round(float(similarities[idx]), 4),
+            "color": AESTHETIC_COLORS.get(all_labels[idx], "#888"),
+        })
+
+    return results
+
+
 def get_umap_projection(user_vectors: list[list[float]]) -> dict:
-    centroids, _, all_vectors, all_labels = load_data()
+    centroids, _, all_vectors, all_labels, _ = load_data()
     reducer = get_reducer()
-    user_vec = np.mean(user_vectors, axis=0)
+
+    vecs = np.array(user_vectors)
+    n = len(vecs)
+    weights = np.exp(np.linspace(0, 1.1, n))
+    weights = weights / weights.sum()
+    user_vec = np.average(vecs, axis=0, weights=weights)
 
     centroid_list = list(centroids.values())
     centroid_labels = list(centroids.keys())
@@ -151,7 +283,7 @@ def get_umap_projection(user_vectors: list[list[float]]) -> dict:
 
 
 def generate_pairs(n: int = 25) -> list[dict]:
-    centroids, image_pool, _, _ = load_data()
+    centroids, image_pool, _, _, _ = load_data()
     aesthetics = list(image_pool.keys())
     pairs = []
     for _ in range(n):
@@ -166,12 +298,12 @@ def generate_pairs(n: int = 25) -> list[dict]:
 
 
 def get_centroid(aesthetic: str) -> list[float]:
-    centroids, _, _, _ = load_data()
+    centroids, _, _, _, _ = load_data()
     return centroids[aesthetic].tolist()
 
 
 def get_moodboard(aesthetic: str, n: int = 4) -> list[str]:
-    _, image_pool, _, _ = load_data()
+    _, image_pool, _, _, _ = load_data()
     images = image_pool.get(aesthetic, [])
     return images[:n]
 
@@ -186,13 +318,11 @@ def get_clip_model():
 
 
 def classify_image(image_bytes: bytes) -> dict:
-    """Classify raw image bytes against all aesthetic centroids."""
     import torch
     from PIL import Image
     import io
 
     model, preprocess, device = get_clip_model()
-
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     tensor = preprocess(image).unsqueeze(0).to(device)
 

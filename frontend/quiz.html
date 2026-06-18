@@ -24,34 +24,71 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 2rem;
+      padding: 2rem 2rem 3rem;
       position: relative;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
+    /* Spacer to push content to center on tall screens */
+    .v-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin: auto;
+    }
+
+    /* Animated background blobs */
+    .bg-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0;
+      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .bg-blob-left {
+      width: 500px;
+      height: 500px;
+      top: -100px;
+      left: -150px;
+    }
+    .bg-blob-right {
+      width: 400px;
+      height: 400px;
+      bottom: -80px;
+      right: -100px;
+    }
+
+    /* Grain */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 100;
-      opacity: 0.055;
+      opacity: 0.06;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
       background-repeat: repeat;
       background-size: 128px 128px;
     }
 
+    /* Nav */
     .top {
       width: 100%;
       max-width: 920px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+      z-index: 10;
     }
 
     .logo {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       letter-spacing: 0.25em;
       color: var(--text-dim);
     }
@@ -63,14 +100,16 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* Progress */
     .progress-bar {
       width: 100%;
       max-width: 920px;
       height: 1px;
       background: var(--border);
-      margin-bottom: 3rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      z-index: 10;
     }
-
     .progress-fill {
       height: 100%;
       background: var(--text-secondary);
@@ -83,10 +122,13 @@
       letter-spacing: 0.3em;
       text-transform: uppercase;
       color: var(--text-dim);
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       text-align: center;
+      position: relative;
+      z-index: 10;
     }
 
+    /* Pair */
     .pair {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -95,6 +137,8 @@
       max-width: 920px;
       opacity: 1;
       transition: opacity 0.18s ease;
+      position: relative;
+      z-index: 10;
     }
     .pair.fading { opacity: 0; }
 
@@ -103,9 +147,12 @@
       position: relative;
       overflow: hidden;
       border: 1px solid var(--border);
-      transition: border-color 0.25s;
+      transition: border-color 0.25s, box-shadow 0.25s;
     }
-    .card:hover { border-color: #bbb; }
+    .card:hover {
+      border-color: #bbb;
+      box-shadow: 0 4px 32px rgba(26,24,21,0.08);
+    }
 
     .card img {
       width: 100%;
@@ -120,7 +167,7 @@
     .card-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(26,24,21,0.04);
+      background: rgba(26,24,21,0.03);
       opacity: 0;
       transition: opacity 0.2s;
       pointer-events: none;
@@ -130,8 +177,8 @@
     .card-label {
       position: absolute;
       bottom: 0; left: 0; right: 0;
-      padding: 2rem 1rem 1rem;
-      background: linear-gradient(transparent, rgba(245,240,232,0.85));
+      padding: 3rem 1.2rem 1.2rem;
+      background: linear-gradient(transparent, rgba(245,240,232,0.9));
       font-size: 0.58rem;
       letter-spacing: 0.25em;
       text-transform: uppercase;
@@ -141,18 +188,35 @@
     }
     .card:hover .card-label { opacity: 1; }
 
-    .skip {
-      margin-top: 2rem;
-      font-size: 0.58rem;
+    /* Bottom actions */
+    .bottom-bar {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1.5rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .skip-btn {
+      font-size: 0.62rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--text-dim);
+      border: 1px solid var(--border);
+      background: rgba(245,240,232,0.8);
+      padding: 0.5rem 1.5rem;
       cursor: pointer;
-      transition: color 0.2s;
-      border: none;
-      background: none;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      backdrop-filter: blur(4px);
     }
-    .skip:hover { color: var(--text-secondary); }
+    .skip-btn:hover {
+      color: var(--text-secondary);
+      border-color: #bbb;
+      background: var(--surface);
+    }
 
     .loading {
       color: var(--text-dim);
@@ -161,10 +225,35 @@
       text-align: center;
       grid-column: 1 / -1;
     }
+
+    .card-skeleton {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 1.2rem 1rem 2rem; }
+      .pair { grid-template-columns: 1fr; gap: 0.6rem; }
+      .card img { aspect-ratio: 4/3; }
+      .top { margin-bottom: 1rem; }
+      .progress-bar { margin-bottom: 1.5rem; }
+    }
   </style>
 </head>
 <body>
 
+  <!-- Background blobs -->
+  <div class="bg-blob bg-blob-left" id="blob-left"></div>
+  <div class="bg-blob bg-blob-right" id="blob-right"></div>
+
+  <div class="v-center">
   <div class="top">
     <span class="logo">◈ KANSEI</span>
     <span class="counter" id="counter">1 / 25</span>
@@ -180,29 +269,64 @@
     <div class="loading">Loading...</div>
   </div>
 
-  <button class="skip" id="skip">skip</button>
+  <div class="bottom-bar">
+    <button class="skip-btn" id="skip">Skip this pair</button>
+  </div>
+
+  </div><!-- end v-center -->
 
   <script>
-    const API = 'http://127.0.0.1:8000';
+    const API = '';
     const TOTAL = 25;
+
+    const COLORS = {
+      "afrofuturism":"#9B59B6","boho":"#E67E22","brutalism":"#7F8C8D",
+      "coastal cool":"#3498DB","cottagecore":"#4A8A5A","cyber minimalism":"#00CED1",
+      "cyberpunk":"#CC00CC","dark academia":"#8B6914","ethereal":"#7A5A9A",
+      "glam maximalism":"#A07800","quiet luxury":"#5A5550","solarpunk":"#2ECC71",
+      "teracotta modernism":"#C86040","vintage americana":"#C84040",
+      "wabi sabi":"#7A6A50","zen modern":"#708090",
+    };
 
     let pairs = [];
     let round = 0;
     let chosenVectors = [];
     let choiceHistory = [];
+    let choiceLog = [];
     let transitioning = false;
+    let centroidCache = {};  // preloaded on init
 
     async function init() {
-      const res = await fetch(`${API}/api/pairs?n=${TOTAL}`);
-      const data = await res.json();
-      pairs = data.pairs;
+      // Fetch pairs + all 16 centroids in parallel — no per-click API calls
+      const aesthetics = Object.keys(COLORS);
+      const [pairsRes, ...centroidRes] = await Promise.all([
+        fetch(`${API}/api/pairs?n=${TOTAL}`),
+        ...aesthetics.map(a => fetch(`${API}/api/centroid/${encodeURIComponent(a)}`))
+      ]);
+
+      const pairsData = await pairsRes.json();
+      pairs = pairsData.pairs;
+
+      const centroidData = await Promise.all(centroidRes.map(r => r.json()));
+      aesthetics.forEach((a, i) => { centroidCache[a] = centroidData[i].vector; });
+
       renderRound();
     }
 
-    async function getCentroid(aesthetic) {
-      const res = await fetch(`${API}/api/centroid/${encodeURIComponent(aesthetic)}`);
-      const data = await res.json();
-      return data.vector;
+    function getCentroid(aesthetic) {
+      // Synchronous — cache is guaranteed populated by init()
+      return centroidCache[aesthetic] || null;
+    }
+
+    function updateBlobs(leftAesthetic, rightAesthetic) {
+      const left = COLORS[leftAesthetic] || '#D4CEC4';
+      const right = COLORS[rightAesthetic] || '#D4CEC4';
+      const blobLeft = document.getElementById('blob-left');
+      const blobRight = document.getElementById('blob-right');
+      blobLeft.style.background = left;
+      blobLeft.style.opacity = '0.12';
+      blobRight.style.background = right;
+      blobRight.style.opacity = '0.1';
     }
 
     async function choose(aesthetic) {
@@ -212,9 +336,17 @@
       const pairEl = document.getElementById('pair');
       pairEl.classList.add('fading');
 
-      const vector = await getCentroid(aesthetic);
-      chosenVectors.push(vector);
+      const vector = getCentroid(aesthetic);
+      if (vector) chosenVectors.push(vector);
       choiceHistory.push({ aesthetic, round });
+
+      // Track rejection
+      const pair = pairs[round];
+      const rejected = pair.left.aesthetic === aesthetic
+        ? pair.right.aesthetic
+        : pair.left.aesthetic;
+      choiceLog.push({ chosen: aesthetic, rejected });
+
       round++;
 
       await sleep(200);
@@ -222,6 +354,7 @@
       if (round >= TOTAL) {
         sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
         sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
+        sessionStorage.setItem('kansei_choice_log', JSON.stringify(choiceLog));
         window.location.href = '/result';
       } else {
         renderRound();
@@ -237,15 +370,26 @@
       document.getElementById('counter').textContent = `${round + 1} / ${TOTAL}`;
       document.getElementById('progress').style.width = `${pct}%`;
 
+      // Update background blobs
+      updateBlobs(pair.left.aesthetic, pair.right.aesthetic);
+
       const container = document.getElementById('pair');
       container.innerHTML = `
         <div class="card" id="card-left">
-          <img src="${API}/images/${encodeURIComponent(pair.left.aesthetic)}/${encodeURIComponent(pair.left.image)}" alt="" />
+          <div class="card-skeleton" id="skel-left"></div>
+          <img src="${API}/images/${encodeURIComponent(pair.left.aesthetic)}/${encodeURIComponent(pair.left.image)}"
+               style="display:none" alt=""
+               onload="this.style.display='block';document.getElementById('skel-left').style.display='none'"
+               onerror="document.getElementById('skel-left').style.display='none';this.style.display='block'" />
           <div class="card-overlay"></div>
           <div class="card-label">Choose</div>
         </div>
         <div class="card" id="card-right">
-          <img src="${API}/images/${encodeURIComponent(pair.right.aesthetic)}/${encodeURIComponent(pair.right.image)}" alt="" />
+          <div class="card-skeleton" id="skel-right"></div>
+          <img src="${API}/images/${encodeURIComponent(pair.right.aesthetic)}/${encodeURIComponent(pair.right.image)}"
+               style="display:none" alt=""
+               onload="this.style.display='block';document.getElementById('skel-right').style.display='none'"
+               onerror="document.getElementById('skel-right').style.display='none';this.style.display='block'" />
           <div class="card-overlay"></div>
           <div class="card-label">Choose</div>
         </div>
@@ -265,6 +409,7 @@
       if (round >= TOTAL) {
         sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
         sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
+        sessionStorage.setItem('kansei_choice_log', JSON.stringify(choiceLog));
         window.location.href = '/result';
       } else {
         renderRound();

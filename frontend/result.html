@@ -222,9 +222,44 @@
     }
     .spiral-section.visible { opacity: 1; transform: none; }
 
-    #spiral-canvas {
+    #freq-chart {
       width: 100%;
-      height: 520px;
+      padding: 0.5rem 0;
+    }
+    .freq-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .freq-name {
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      width: 160px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .freq-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface);
+      border-radius: 0;
+      position: relative;
+    }
+    .freq-bar-fill {
+      height: 100%;
+      border-radius: 0;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+    .freq-count {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      width: 28px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
     }
 
     /* ── Insight block ── */
@@ -285,6 +320,86 @@
       font-size: 0.82rem;
       color: var(--text-secondary);
       line-height: 1.5;
+    }
+
+    /* Advanced analysis */
+    .advanced-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 1;
+    }
+    .adv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+    }
+    .adv-block { padding: 0; }
+    .adv-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .nearest-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+    }
+    .nearest-item { position: relative; }
+    .nearest-item img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      display: block;
+      border: 1px solid var(--border);
+      filter: grayscale(8%);
+      transition: filter 0.2s;
+    }
+    .nearest-item:hover img { filter: grayscale(0%); }
+    .nearest-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 1.5rem 0.4rem 0.4rem;
+      background: linear-gradient(transparent, rgba(245,240,232,0.92));
+      font-size: 0.48rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .nearest-item:hover .nearest-label { opacity: 1; }
+    .rejection-list { display: flex; flex-direction: column; gap: 0.7rem; }
+    .rejection-row { display: flex; align-items: center; gap: 0.8rem; }
+    .rej-name {
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      width: 150px;
+      flex-shrink: 0;
+    }
+    .rej-bar-track { flex: 1; height: 4px; background: var(--surface); }
+    .rej-bar-fill { height: 100%; transition: width 1s cubic-bezier(0.16,1,0.3,1); width: 0%; opacity: 0.6; }
+    .rej-count { font-size: 0.6rem; color: var(--text-dim); width: 70px; text-align: right; flex-shrink: 0; }
+    .rej-tag {
+      font-size: 0.48rem;
+      letter-spacing: 0.15em;
+      padding: 0.15rem 0.4rem;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .never-chosen { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .never-label { font-size: 0.55rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.6rem; }
+    .never-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .never-tag {
+      font-size: 0.52rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.2rem 0.6rem;
     }
 
     /* ── Fibonacci ── */
@@ -444,27 +559,184 @@
     .action-btn.primary { color: var(--text-secondary); border-color: #aaa; }
     .action-btn.primary:hover { color: var(--text-primary); border-color: var(--text-primary); }
 
-    /* Share card */
+    /* Share card — receipt */
     #share-card {
       position: fixed;
       left: -9999px; top: 0;
-      width: 1080px;
-      background: var(--bg);
-      padding: 5rem;
-      font-family: 'Inter', sans-serif;
+      width: 480px;
+      background: #1A1815;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      padding: 28px;
     }
-    .share-card-inner { border: 1px solid var(--border); padding: 4rem; }
-    .share-mark { font-size: 0.75rem; letter-spacing: 0.3em; color: var(--text-dim); margin-bottom: 3rem; }
-    .share-label { font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 1rem; }
-    .share-title { font-size: 5rem; font-weight: 800; letter-spacing: -0.04em; line-height: 0.95; margin-bottom: 0.5rem; }
-    .share-word { font-size: 1.2rem; font-weight: 300; font-style: italic; color: var(--text-dim); margin-bottom: 1.5rem; }
-    .share-desc { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 3rem; max-width: 500px; line-height: 1.65; }
-    .share-scores { display: flex; gap: 3rem; margin-bottom: 3rem; }
-    .share-score-name { font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.3rem; }
-    .share-score-val { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; }
-    .share-footer { font-size: 0.58rem; letter-spacing: 0.2em; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 1.5rem; }
+    .rc-inner {
+      background: #F7F3EC;
+      padding: 32px 28px 28px;
+      position: relative;
+    }
+    /* Torn top edge */
+    .rc-inner::before {
+      content: '';
+      display: block;
+      height: 10px;
+      background: repeating-linear-gradient(
+        90deg,
+        #F7F3EC 0px, #F7F3EC 10px,
+        transparent 10px, transparent 14px
+      );
+      position: absolute;
+      top: -10px; left: 0; right: 0;
+    }
+    .rc-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .rc-receipt-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #1A1815;
+      text-transform: uppercase;
+    }
+    .rc-number {
+      font-size: 10px;
+      color: #6B6560;
+      letter-spacing: 0.05em;
+    }
+    .rc-brand {
+      text-align: center;
+      margin: 12px 0 4px;
+    }
+    .rc-brand-name {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .rc-brand-sub {
+      font-size: 9px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: #A8A29C;
+      margin-top: 3px;
+    }
+    .rc-tagline {
+      text-align: center;
+      font-size: 9px;
+      color: #6B6560;
+      font-style: italic;
+      margin: 6px 0 10px;
+      letter-spacing: 0.05em;
+    }
+    .rc-dots {
+      border-top: 1.5px dashed #C8C2B8;
+      margin: 10px 0;
+    }
+    .rc-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #6B6560;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .rc-items {
+      margin: 14px 0;
+    }
+    .rc-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+      gap: 6px;
+    }
+    .rc-item-left {}
+    .rc-item-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1A1815;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .rc-item-desc {
+      font-size: 9px;
+      color: #6B6560;
+      margin-top: 1px;
+      letter-spacing: 0.02em;
+    }
+    .rc-item-dots {
+      flex: 1;
+      border-bottom: 1px dotted #C8C2B8;
+      margin: 0 4px;
+      position: relative;
+      top: -3px;
+      min-width: 20px;
+    }
+    .rc-item-score {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1A1815;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .rc-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-top: 10px;
+      margin-top: 4px;
+      border-top: 2px solid #1A1815;
+    }
+    .rc-total-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #1A1815;
+    }
+    .rc-total-val {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1A1815;
+    }
+    /* DNA swatch bar */
+    .rc-swatch {
+      display: flex;
+      height: 4px;
+      margin: 14px 0 0;
+      gap: 1px;
+    }
+    .rc-swatch-seg { height: 100%; }
+    /* Barcode */
+    .rc-barcode-num {
+      text-align: center;
+      font-size: 8px;
+      letter-spacing: 0.3em;
+      color: #A8A29C;
+      margin-bottom: 10px;
+    }
+    .rc-thankyou {
+      text-align: center;
+      font-size: 22px;
+      font-style: italic;
+      font-weight: 700;
+      color: #1A1815;
+      margin: 6px 0 4px;
+      letter-spacing: -0.01em;
+    }
+    .rc-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8px;
+      color: #A8A29C;
+      letter-spacing: 0.08em;
+      margin-top: 8px;
+      text-transform: uppercase;
+    }
 
-    /* Loading */
+        /* Loading */
     .loading-state {
       max-width: 1100px;
       margin: 10rem auto;
@@ -478,13 +750,39 @@
     .dot:nth-child(2) { animation-delay: 0.2s; }
     .dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes blink { 0%,80%,100%{opacity:0.15} 40%{opacity:1} }
+
+    @media (max-width: 700px) {
+      body { padding: 1.5rem 1rem; }
+      .nav { margin-bottom: 2.5rem; }
+      .hero-title { font-size: 3.2rem; }
+      .hero-top { flex-direction: column; }
+      .insight-section,
+      .bottom-columns,
+      .adv-grid,
+      #advanced-section > div { grid-template-columns: 1fr !important; gap: 2rem !important; }
+      .fib-row-1 { grid-template-columns: 1fr; }
+      .fib-right-stack { grid-template-rows: auto; }
+      .fib-row-2 { grid-template-columns: 1fr 1fr; }
+      .fib-box-large { min-height: 160px; }
+      .fib-box-medium { min-height: 110px; }
+      .nearest-grid { grid-template-columns: repeat(5, 1fr) !important; }
+      .freq-name { width: 110px; }
+      .rej-name { width: 100px; }
+      #umap-plot { height: 300px; }
+      .actions { flex-direction: column; align-items: stretch; }
+      .action-btn { text-align: center; }
+      .divider { margin: 2.5rem auto; }
+    }
   </style>
 </head>
 <body>
 
   <nav class="nav">
     <a class="logo" href="/">◈ KANSEI</a>
-    <a class="retake" href="/">← Back</a>
+    <div style="display:flex;gap:0.8rem;align-items:center">
+      <a class="retake" href="/explore">Explore</a>
+      <a class="retake" href="/">← Back</a>
+    </div>
   </nav>
 
   <div class="loading-state" id="loading">
@@ -520,8 +818,8 @@
 
     <!-- Spiral -->
     <div class="spiral-section" id="spiral-section">
-      <p class="section-label">Your journey through 25 choices</p>
-      <svg id="spiral-canvas"></svg>
+      <p class="section-label">How often you reached for each aesthetic</p>
+      <div id="freq-chart"></div>
     </div>
 
     <div class="divider"></div>
@@ -538,6 +836,24 @@
         <p class="consistency-label">Consistency score</p>
         <div class="consistency-score" id="consistency-score">—</div>
         <p class="consistency-desc" id="consistency-desc">—</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Advanced analysis -->
+    <div id="advanced-section" style="max-width:1100px;margin:0 auto;padding:0 0 2rem 0;visibility:visible !important;opacity:1 !important;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4rem;visibility:visible !important;">
+        <div style="visibility:visible !important;">
+          <p style="font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:#A8A29C;margin-bottom:1rem;visibility:visible !important;">5 images closest to your taste</p>
+          <p style="font-size:0.78rem;color:#6B6560;line-height:1.6;margin-bottom:1.5rem;visibility:visible !important;">These are the individual images from our dataset whose CLIP embeddings are most similar to your mean choice vector.</p>
+          <div id="nearest-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;visibility:visible !important;min-height:180px;"></div>
+        </div>
+        <div style="visibility:visible !important;">
+          <p style="font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:#A8A29C;margin-bottom:1rem;visibility:visible !important;">What you actively avoided</p>
+          <p style="font-size:0.78rem;color:#6B6560;line-height:1.6;margin-bottom:1.5rem;visibility:visible !important;">Tracking your rejections reveals what you pushed away.</p>
+          <div id="rejection-list" style="display:flex;flex-direction:column;gap:0.6rem;visibility:visible !important;"></div>
+        </div>
       </div>
     </div>
 
@@ -584,23 +900,67 @@
       <button class="action-btn primary" onclick="downloadCard()">Save card ↓</button>
     </div>
 
-    <!-- Share card -->
+    <!-- Explore banner -->
+    <div style="max-width:1100px;margin:4rem auto 0;border-top:1px solid var(--border);padding-top:4rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;">
+      <div>
+        <p style="font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.8rem;">Curious about the others?</p>
+        <p style="font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;line-height:1;color:var(--text-primary);">Explore all 16 aesthetics.</p>
+        <p style="margin-top:0.8rem;font-size:0.85rem;color:var(--text-secondary);line-height:1.6;max-width:420px;">See every aesthetic world in the dataset — what defines it, what it feels like, and where it sits in CLIP space.</p>
+      </div>
+      <a href="/explore" style="flex-shrink:0;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-primary);border:1px solid var(--text-primary);padding:0.8rem 2rem;text-decoration:none;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--text-primary)';this.style.color='var(--bg)'" onmouseout="this.style.background='';this.style.color='var(--text-primary)'">Explore →</a>
+    </div>
+
+    <!-- Share card — receipt -->
     <div id="share-card">
-      <div class="share-card-inner">
-        <div class="share-mark">◈ KANSEI</div>
-        <div class="share-label">Your aesthetic is</div>
-        <div class="share-title" id="sc-title">—</div>
-        <div class="share-word" id="sc-word">—</div>
-        <div class="share-desc" id="sc-desc">—</div>
-        <div class="share-scores" id="sc-scores"></div>
-        <div class="share-footer">kansei · CLIP · aesthetic intelligence</div>
+      <div class="rc-inner">
+        <div class="rc-header-row">
+          <div class="rc-receipt-label">Receipt</div>
+          <div class="rc-number">No. <span id="sc-number">000001</span></div>
+        </div>
+
+        <div class="rc-brand">
+          <div class="rc-brand-name" id="sc-title">—</div>
+          <div class="rc-brand-sub" id="sc-word">—</div>
+        </div>
+
+        <div class="rc-tagline" id="sc-desc">—</div>
+
+        <div class="rc-dots"></div>
+
+        <div class="rc-meta-row">
+          <span>DATE: <span id="sc-date">—</span></span>
+          <span>◈ KANSEI</span>
+        </div>
+
+        <div class="rc-dots"></div>
+
+        <div class="rc-items" id="sc-scores"></div>
+
+        <div class="rc-dots"></div>
+
+        <div class="rc-total-row">
+          <div class="rc-total-label">Identity</div>
+          <div class="rc-total-val" id="sc-total">—</div>
+        </div>
+
+        <div class="rc-swatch" id="sc-swatch"></div>
+
+        <svg id="rc-barcode-svg" style="width:100%;height:44px;display:block;margin:18px 0 6px"></svg>
+        <div class="rc-barcode-num" id="sc-barcode-num">感 · 性 · 2026</div>
+
+        <div class="rc-thankyou">Thank You!</div>
+
+        <div class="rc-footer">
+          <span>◈ kansei</span>
+          <span>感性 · aesthetic intelligence</span>
+        </div>
       </div>
     </div>
 
   </div>
 
   <script>
-    const API = 'http://127.0.0.1:8000';
+    const API = '';
     const UNSPLASH_KEY = '66xO-AsyUQFPB6i-jmlQnTqUOGz-eKnDxuud25mUYEU';
 
     const COLORS = {
@@ -699,21 +1059,30 @@
         const histRaw = sessionStorage.getItem('kansei_choices');
         if (histRaw) choiceHistory = JSON.parse(histRaw);
 
-        const [scoreRes, umapRes] = await Promise.all([
+        const choiceLog = JSON.parse(sessionStorage.getItem('kansei_choice_log') || '[]');
+
+        const [scoreRes, umapRes, nearestRes] = await Promise.all([
           fetch(`${API}/api/score`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vectors }),
+            body: JSON.stringify({ vectors, choices: choiceLog }),
           }),
           fetch(`${API}/api/umap`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vectors }),
           }),
+          fetch(`${API}/api/nearest`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vectors, k: 5 }),
+          }),
         ]);
 
         scoreData = await scoreRes.json();
         umapData = await umapRes.json();
+        const nearestData = await nearestRes.json();
+        scoreData.nearest = nearestData.nearest;
       }
 
       topAesthetic = scoreData.top;
@@ -722,8 +1091,9 @@
 
       renderHero(scoreData);
       renderDNA(scoreData.scores);
-      renderSpiral(choiceHistory, scoreData.scores);
+      renderFreqChart(choiceHistory, scoreData.scores);
       renderInsight(scoreData);
+      renderAdvanced(scoreData);
       renderFibGrid(scoreData.scores);
       renderUMAP(umapData, scoreData);
       await renderMoodboard(scoreData.top);
@@ -733,7 +1103,7 @@
       document.getElementById('content').style.display = 'block';
 
       requestAnimationFrame(() => {
-        const sections = ['hero', 'dna-section', 'spiral-section', 'insight-section', 'fib-section', 'bottom-cols'];
+        const sections = ['hero', 'dna-section', 'spiral-section', 'insight-section', 'advanced-section', 'fib-section', 'bottom-cols'];
         sections.forEach((id, i) => {
           setTimeout(() => document.getElementById(id).classList.add('visible'), i * 120);
         });
@@ -783,111 +1153,61 @@
       });
     }
 
-    function renderSpiral(history, scores) {
-      const svg = d3.select('#spiral-canvas');
-      const container = document.getElementById('spiral-canvas').parentElement; const W = container.getBoundingClientRect().width || 900;
-      const H = 520;
-      svg.attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H);
+    function renderFreqChart(history, scores) {
+      const container = document.getElementById('freq-chart');
 
-      const cx = W / 2, cy = H / 2;
-      const n = history.length > 0 ? history.length : 25;
-      const aestheticList = Object.keys(scores);
+      // Count picks from real history or simulate from scores
+      const counts = {};
+      Object.keys(scores).forEach(a => counts[a] = 0);
 
-      // Generate mock spiral data if no history
-      const data = history.length > 0
-        ? history
-        : aestheticList.slice(0, n).map((a, i) => ({ aesthetic: a, round: i }));
-
-      const turns = 3;
-      const maxR = Math.min(W, H) * 0.42;
-
-      // Spiral points
-      const points = data.map((d, i) => {
-        const t = i / (n - 1);
-        const angle = t * turns * 2 * Math.PI - Math.PI / 2;
-        const r = t * maxR;
-        return {
-          x: cx + r * Math.cos(angle),
-          y: cy + r * Math.sin(angle),
-          aesthetic: d.aesthetic || d,
-          t,
-          angle,
-          r,
-        };
-      });
-
-      // Draw soft connecting path
-      const line = d3.line()
-        .x(d => d.x)
-        .y(d => d.y)
-        .curve(d3.curveCatmullRom.alpha(0.5));
-
-      svg.append('path')
-        .datum(points)
-        .attr('d', line)
-        .attr('fill', 'none')
-        .attr('stroke', '#D4CEC4')
-        .attr('stroke-width', 1)
-        .attr('opacity', 0.6);
-
-      // Draw soft radiating circles at each node
-      points.forEach((p, i) => {
-        const color = COLORS[p.aesthetic] || '#888';
-        const size = 3 + p.t * 12;
-
-        // Outer glow circle (soft, translucent)
-        svg.append('circle')
-          .attr('cx', p.x).attr('cy', p.y)
-          .attr('r', size * 2.5)
-          .attr('fill', color)
-          .attr('opacity', 0.06);
-
-        // Mid ring
-        svg.append('circle')
-          .attr('cx', p.x).attr('cy', p.y)
-          .attr('r', size * 1.4)
-          .attr('fill', color)
-          .attr('opacity', 0.12);
-
-        // Core dot
-        svg.append('circle')
-          .attr('cx', p.x).attr('cy', p.y)
-          .attr('r', size * 0.5)
-          .attr('fill', color)
-          .attr('opacity', 0.8);
-
-        // Radiating lines (soft)
-        if (i % 3 === 0) {
-          const numLines = 8;
-          for (let l = 0; l < numLines; l++) {
-            const lineAngle = (l / numLines) * 2 * Math.PI;
-            const lineLen = size * 2.2;
-            svg.append('line')
-              .attr('x1', p.x).attr('y1', p.y)
-              .attr('x2', p.x + Math.cos(lineAngle) * lineLen)
-              .attr('y2', p.y + Math.sin(lineAngle) * lineLen)
-              .attr('stroke', color)
-              .attr('stroke-width', 0.5)
-              .attr('opacity', 0.18);
-          }
-        }
-      });
-
-      // Label first and last
-      if (points.length > 0) {
-        svg.append('text')
-          .attr('x', points[0].x + 12).attr('y', points[0].y + 4)
-          .attr('font-size', '9px').attr('fill', '#A8A29C')
-          .attr('letter-spacing', '0.1em')
-          .text('start');
-
-        const last = points[points.length - 1];
-        svg.append('text')
-          .attr('x', last.x + 12).attr('y', last.y + 4)
-          .attr('font-size', '9px').attr('fill', '#6B6560')
-          .attr('letter-spacing', '0.1em')
-          .text(capitalize(last.aesthetic));
+      if (history.length > 0) {
+        history.forEach(h => {
+          const a = h.aesthetic || h;
+          if (counts[a] !== undefined) counts[a]++;
+        });
+      } else {
+        // Simulate from scores proportionally across 25 rounds
+        const entries = Object.entries(scores);
+        const total = entries.reduce((s, [,v]) => s + v, 0);
+        let assigned = 0;
+        entries.forEach(([a, v], i) => {
+          const n = i === entries.length - 1
+            ? 25 - assigned
+            : Math.round((v / total) * 25);
+          counts[a] = Math.max(0, n);
+          assigned += n;
+        });
       }
+
+      // Sort by count descending, filter zeros
+      const sorted = Object.entries(counts)
+        .filter(([, c]) => c > 0)
+        .sort((a, b) => b[1] - a[1]);
+
+      const max = sorted[0][1];
+
+      container.innerHTML = sorted.map(([aesthetic, count]) => {
+        const color = COLORS[aesthetic] || '#888';
+        const pct = (count / max) * 100;
+        const times = count === 1 ? '1 time' : `${count} times`;
+        return `
+          <div class="freq-row">
+            <div class="freq-name">${aesthetic}</div>
+            <div class="freq-bar-track">
+              <div class="freq-bar-fill" data-pct="${pct}" style="background:${color}"></div>
+            </div>
+            <div class="freq-count">${times}</div>
+          </div>`;
+      }).join('');
+
+      // Animate bars
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          container.querySelectorAll('.freq-bar-fill').forEach(bar => {
+            bar.style.width = bar.dataset.pct + '%';
+          });
+        }, 400);
+      });
     }
 
     function renderInsight(data) {
@@ -1056,40 +1376,193 @@
       }
     }
 
-    function renderShareCard(data) {
+
+        function renderAdvanced(data) {
+      // kNN nearest images
+      const nearest = data.nearest || [];
+      const nearestGrid = document.getElementById('nearest-grid');
+      if (nearestGrid && nearest.length > 0) {
+        nearestGrid.innerHTML = nearest.map(item => `
+          <div class="nearest-item">
+            <img src="${API}/images/${encodeURIComponent(item.aesthetic)}/${encodeURIComponent(item.image)}"
+                 alt="${item.aesthetic}" loading="lazy" />
+            <div class="nearest-label">${item.aesthetic}</div>
+          </div>
+        `).join('');
+      }
+
+      // Rejection analysis
+      const rejList = document.getElementById('rejection-list');
+      if (rejList && data.rejections) {
+        const rej = data.rejections;
+        const topRej = rej.top_rejected || [];
+        const maxRej = topRej.length > 0 ? topRej[0][1] : 1;
+
+        const mostAvoided = rej.most_avoided || [];
+        const neverChosen = rej.never_chosen || [];
+
+        // Show all aesthetics with rejections
+        const allRej = Object.entries(rej.rejection_counts || {})
+          .filter(([,c]) => c > 0)
+          .sort((a,b) => b[1]-a[1]);
+
+        rejList.innerHTML = allRej.map(([aesthetic, count]) => {
+          const color = COLORS[aesthetic] || '#888';
+          const barW = maxRej > 0 ? (count / maxRej) * 100 : 0;
+          const isAvoided = mostAvoided.some(([a]) => a === aesthetic);
+          return `
+            <div class="rejection-row">
+              <div class="rej-name">${aesthetic}</div>
+              <div class="rej-bar-track">
+                <div class="rej-bar-fill" data-w="${barW}" style="background:${color}"></div>
+              </div>
+              <div class="rej-count">${count}x rejected</div>
+              ${isAvoided ? '<span class="rej-tag">avoided</span>' : ''}
+            </div>`;
+        }).join('');
+
+        // Never chosen section
+        if (neverChosen.length > 0) {
+          rejList.innerHTML += `
+            <div class="never-chosen">
+              <div class="never-label">Never chosen</div>
+              <div class="never-tags">
+                ${neverChosen.map(a => `<span class="never-tag">${a}</span>`).join('')}
+              </div>
+            </div>`;
+        }
+
+        // Animate rejection bars
+        setTimeout(() => {
+          rejList.querySelectorAll('.rej-bar-fill').forEach(bar => {
+            bar.style.width = bar.dataset.w + '%';
+          });
+        }, 600);
+
+      } else if (rejList) {
+        rejList.innerHTML = '<p style="font-size:0.72rem;color:var(--text-dim)">Rejection data available after taking the quiz.</p>';
+      }
+    }
+
+    function drawBarcode(seed) {
+      const svg = document.getElementById('rc-barcode-svg');
+      if (!svg) return;
+      const W = 424, H = 44;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+
+      // Seeded pseudo-random bar widths (1-3px) with gaps (1-2px)
+      let x = 0, rects = '';
+      let s = seed || 12345;
+      function rand() { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }
+
+      while (x < W) {
+        const barW = Math.floor(rand() * 3) + 1;
+        rects += `<rect x="${x}" y="0" width="${barW}" height="${H}" fill="#1A1815"/>`;
+        x += barW;
+        x += Math.floor(rand() * 2) + 1; // gap
+      }
+      svg.innerHTML = rects;
+    }
+
+        function renderShareCard(data) {
+      const color = COLORS[data.top] || '#1A1815';
+      const now = new Date();
+      const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
+
+      // Header
       document.getElementById('sc-title').textContent = capitalize(data.top);
-      document.getElementById('sc-title').style.color = COLORS[data.top] || '#1A1815';
+      document.getElementById('sc-title').style.color = color;
       document.getElementById('sc-word').textContent = DESCRIPTORS[data.top] || '';
-      document.getElementById('sc-desc').textContent = data.description;
-      const top3 = Object.entries(data.scores).slice(0, 3);
-      document.getElementById('sc-scores').innerHTML = top3.map(([a, pct]) => `
-        <div>
-          <div class="share-score-name">${a}</div>
-          <div class="share-score-val" style="color:${COLORS[a] || '#888'}">${Math.round(pct)}%</div>
-        </div>
-      `).join('');
+      document.getElementById('sc-desc').textContent = `/ ${data.description} /`;
+      document.getElementById('sc-date').textContent = dateStr;
+      document.getElementById('sc-total').textContent = capitalize(data.top);
+      document.getElementById('sc-total').style.color = color;
+
+      // Receipt number from top score
+      const topScore = Math.round(Object.values(data.scores)[0]);
+      document.getElementById('sc-number').textContent = String(topScore).padStart(6, '0');
+      document.getElementById('sc-barcode-num').textContent = `感 · 性 · ${now.getFullYear()}`;
+      drawBarcode(topScore * 997 + data.top.length * 31);
+
+      // Line items — top 5 aesthetics
+      const entries = Object.entries(data.scores).slice(0, 5);
+      document.getElementById('sc-scores').innerHTML = entries.map(([aesthetic, pct], i) => {
+        const c = COLORS[aesthetic] || '#1A1815';
+        const desc = DESCRIPTORS[aesthetic] || '';
+        return `
+          <div class="rc-item">
+            <div class="rc-item-left">
+              <div class="rc-item-name" style="color:${i===0?color:'#1A1815'}">${aesthetic.toUpperCase()}</div>
+              <div class="rc-item-desc">${desc}</div>
+            </div>
+            <div class="rc-item-dots"></div>
+            <div class="rc-item-score" style="color:${i===0?color:'#1A1815'}">${Math.round(pct)}%</div>
+          </div>`;
+      }).join('');
+
+      // DNA swatch
+      const allEntries = Object.entries(data.scores);
+      const total = allEntries.reduce((s,[,v]) => s+v, 0);
+      document.getElementById('sc-swatch').innerHTML = allEntries.map(([a, v]) => {
+        const w = (v/total)*100;
+        return `<div class="rc-swatch-seg" style="flex:${w};background:${COLORS[a]||'#888'};opacity:0.85"></div>`;
+      }).join('');
     }
 
     async function downloadCard() {
       const btn = document.querySelector('.action-btn.primary');
       btn.textContent = 'Generating...';
       const card = document.getElementById('share-card');
+
+      // Move card into visible DOM temporarily (html2canvas needs it painted)
+      card.style.position = 'fixed';
       card.style.left = '0';
+      card.style.top = '0';
+      card.style.zIndex = '9999';
+      card.style.pointerEvents = 'none';
+
+      // Wait a tick for layout
+      await new Promise(r => setTimeout(r, 150));
+
       try {
         const canvas = await html2canvas(card, {
-          backgroundColor: '#F5F0E8', scale: 2, useCORS: true, logging: false,
+          backgroundColor: '#F5F0E8',
+          scale: 2,
+          useCORS: false,
+          allowTaint: true,
+          logging: false,
+          imageTimeout: 0,
+          onclone: (clonedDoc) => {
+            // Remove any images that might fail CORS — card doesn't have images anyway
+            const imgs = clonedDoc.querySelectorAll('img');
+            imgs.forEach(img => { if (!img.src.startsWith('data:')) img.style.display = 'none'; });
+          }
         });
-        card.style.left = '-9999px';
+
         const link = document.createElement('a');
         link.download = `kansei-${topAesthetic.replace(/ /g, '-')}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-      } catch { card.style.left = '-9999px'; }
+      } catch(e) {
+        console.error('Share card error:', e);
+        alert('Could not generate card. Try again.');
+      }
+
+      // Restore hidden
+      card.style.position = 'fixed';
+      card.style.left = '-9999px';
+      card.style.top = '0';
+      card.style.zIndex = '';
+      card.style.pointerEvents = '';
       btn.textContent = 'Save card ↓';
     }
 
     function copyResult() {
-      navigator.clipboard.writeText(`My Kansei aesthetic: ${capitalize(topAesthetic)}`).then(() => {
+      const top3 = Object.entries(allScores).slice(0, 3);
+      const line = top3.map(([a, pct]) => `${Math.round(pct)}% ${capitalize(a)}`).join(' · ');
+      const text = `${line}\n感性 · kansei`;
+      navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('.action-btn:not(.primary)');
         const orig = btn.textContent;
         btn.textContent = 'Copied ✓';

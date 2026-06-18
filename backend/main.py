@@ -5,7 +5,6 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from pathlib import Path
 import threading
-import io
 
 from core import (
     load_data,
@@ -16,6 +15,9 @@ from core import (
     score,
     get_umap_projection,
     classify_image,
+    real_consistency,
+    rejection_analysis,
+    nearest_images,
     AESTHETIC_DESCRIPTIONS,
     AESTHETIC_COLORS,
 )
@@ -33,6 +35,7 @@ BASE = Path(__file__).parent.parent
 
 app.mount("/images", StaticFiles(directory=BASE / "images"), name="images")
 app.mount("/static", StaticFiles(directory=BASE / "frontend"), name="static")
+
 
 @app.on_event("startup")
 async def startup():
@@ -53,47 +56,80 @@ def index():
 def quiz():
     return FileResponse(BASE / "frontend" / "quiz.html")
 
+@app.get("/explore")
+def explore():
+    return FileResponse(BASE / "frontend" / "explore.html")
+
 @app.get("/result")
 def result():
     return FileResponse(BASE / "frontend" / "result.html")
 
 
+# ── Models ────────────────────────────────────────────────────────────────────
 class ChoicesPayload(BaseModel):
     vectors: list[list[float]]
+    choices: list[dict] | None = None  # [{chosen, rejected}, ...]
 
 
+class NearestPayload(BaseModel):
+    vectors: list[list[float]]
+    k: int = 5
+
+
+# ── API ───────────────────────────────────────────────────────────────────────
 @app.get("/api/pairs")
 def api_pairs(n: int = 25):
     return {"pairs": generate_pairs(n)}
+
 
 @app.get("/api/centroid/{aesthetic}")
 def api_centroid(aesthetic: str):
     return {"vector": get_centroid(aesthetic)}
 
+
 @app.post("/api/score")
 def api_score(payload: ChoicesPayload):
     scores = score(payload.vectors)
     top = list(scores.keys())[0]
+
+    # Real consistency from embedding variance
+    consistency = real_consistency(payload.vectors)
+
+    # Rejection analysis if choices provided
+    rejections = None
+    if payload.choices:
+        rejections = rejection_analysis(payload.choices)
+
     return {
         "scores": scores,
         "top": top,
         "description": AESTHETIC_DESCRIPTIONS.get(top, ""),
         "color": AESTHETIC_COLORS.get(top, "#fff"),
         "moodboard": get_moodboard(top),
+        "consistency": consistency,
+        "rejections": rejections,
     }
+
+
+@app.post("/api/nearest")
+def api_nearest(payload: NearestPayload):
+    results = nearest_images(payload.vectors, k=payload.k)
+    return {"nearest": results}
+
 
 @app.post("/api/umap")
 def api_umap(payload: ChoicesPayload):
     return get_umap_projection(payload.vectors)
+
 
 @app.post("/api/classify")
 async def api_classify(file: UploadFile = File(...)):
     contents = await file.read()
     scores = classify_image(contents)
     top = list(scores.keys())[0]
-    from core import get_centroid as gc
-    proxy_vector = gc(top)
+    proxy_vector = get_centroid(top)
     umap_data = get_umap_projection([proxy_vector])
+    nearest = nearest_images([proxy_vector], k=5)
     return {
         "scores": scores,
         "top": top,
@@ -101,7 +137,11 @@ async def api_classify(file: UploadFile = File(...)):
         "color": AESTHETIC_COLORS.get(top, "#fff"),
         "moodboard": get_moodboard(top),
         "umap": umap_data,
+        "nearest": nearest,
+        "consistency": None,
+        "rejections": None,
     }
+
 
 @app.get("/api/aesthetics")
 def api_aesthetics():
@@ -115,3 +155,11 @@ def api_aesthetics():
             for name in AESTHETIC_DESCRIPTIONS
         ]
     }
+
+
+@app.get("/api/images/{aesthetic}")
+def api_images(aesthetic: str):
+    """Return all image filenames for a given aesthetic."""
+    _, image_pool, _, _, _ = load_data()
+    images = image_pool.get(aesthetic, [])
+    return {"aesthetic": aesthetic, "images": images}
