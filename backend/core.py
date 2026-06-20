@@ -1,4 +1,7 @@
 import json
+import subprocess
+import sys
+import tempfile
 import numpy as np
 import random
 import umap as umap_lib
@@ -6,6 +9,7 @@ from pathlib import Path
 from functools import lru_cache
 
 EMBEDDINGS_PATH = Path(__file__).parent / "kansei_embeddings.json"
+WORKER_PATH = Path(__file__).parent / "classify_worker.py"
 
 AESTHETIC_DESCRIPTIONS = {
     "afrofuturism": "Bold, cosmic, rooted in African tradition and speculative futures.",
@@ -308,30 +312,39 @@ def get_moodboard(aesthetic: str, n: int = 4) -> list[str]:
     return images[:n]
 
 
-@lru_cache(maxsize=1)
-def get_clip_model():
-    import open_clip
-    import torch
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _ , preprocess = open_clip.create_model_and_transforms("ViT-B-32", pretrained="openai")
-    model = model.to(device)
-    model=model.half()
-    model.eval()
-    return model, preprocess, device
-
-
 def classify_image(image_bytes: bytes) -> dict:
-    import torch
-    from PIL import Image
-    import io
+    """
+    Runs CLIP inference in an isolated subprocess (classify_worker.py) so the
+    model's memory footprint is fully released by the OS the moment the
+    subprocess exits — it never accumulates inside this main FastAPI process.
 
-    model, preprocess, device = get_clip_model()
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    tensor = preprocess(image).unsqueeze(0).to(device).half()
+    Trade-off, stated plainly: this is slower per-request than an in-process
+    cached model would be (full model reload every call, no caching across
+    requests), and it writes the uploaded image to a temp file since
+    subprocess args need a filesystem path, not raw bytes. Both costs are
+    acceptable for an occasional feature; neither would be acceptable if
+    classify were the app's hot path.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        tmp.write(image_bytes)
+        tmp_path = tmp.name
 
-    with torch.no_grad():
-        embedding = model.encode_image(tensor)
-        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
+    try:
+        result = subprocess.run(
+            [sys.executable, str(WORKER_PATH), tmp_path],
+            capture_output=True,
+            text=True,
+            timeout=120,  # generous — first call may need to download weights
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
-    user_vec = embedding.cpu().numpy()[0]
-    return score([user_vec.tolist()])
+    if result.returncode != 0:
+        raise RuntimeError(f"classify_worker failed: {result.stderr}")
+
+    output = json.loads(result.stdout.strip().splitlines()[-1])
+    if "error" in output:
+        raise RuntimeError(f"classify_worker error: {output['error']}")
+
+    user_vec = output["embedding"]
+    return score([user_vec])
