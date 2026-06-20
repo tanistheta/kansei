@@ -30,7 +30,6 @@
       overflow-y: auto;
     }
 
-    /* Spacer to push content to center on tall screens */
     .v-center {
       display: flex;
       flex-direction: column;
@@ -39,30 +38,47 @@
       margin: auto;
     }
 
-    /* Animated background blobs */
+    @keyframes blob-drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(45px, -30px) scale(1.15); }
+      66% { transform: translate(-30px, 35px) scale(0.9); }
+    }
+
+    /* Blobs scaled up to roughly 2-2.5x the viewport's largest dimension —
+       at this size the blurred falloff itself becomes the only visible
+       transition across the page, so there's no hard "edge" left where
+       the tint just stops. Center of the screen will often show a soft
+       blend of both aesthetic colors where the two blobs overlap, which
+       keeps the same organic, drifting texture rather than turning into
+       two flat colored halves. */
     .bg-blob {
       position: fixed;
       border-radius: 50%;
-      filter: blur(80px);
+      filter: blur(140px);
       opacity: 0;
-      transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: background 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
       pointer-events: none;
       z-index: 0;
+      animation: blob-drift 14s ease-in-out infinite;
     }
     .bg-blob-left {
-      width: 500px;
-      height: 500px;
-      top: -100px;
-      left: -150px;
+      width: 1400px;
+      height: 1400px;
+      top: -500px;
+      left: -500px;
     }
     .bg-blob-right {
-      width: 400px;
-      height: 400px;
-      bottom: -80px;
-      right: -100px;
+      width: 1300px;
+      height: 1300px;
+      bottom: -500px;
+      right: -500px;
+      animation-delay: -7s;
     }
 
-    /* Grain */
+    .bg-blob.pulse {
+      transition: background 0.3s ease, opacity 0.3s ease, transform 0.3s ease !important;
+    }
+
     body::before {
       content: '';
       position: fixed;
@@ -75,7 +91,6 @@
       background-size: 128px 128px;
     }
 
-    /* Nav */
     .top {
       width: 100%;
       max-width: 920px;
@@ -91,6 +106,7 @@
       font-size: 0.75rem;
       letter-spacing: 0.25em;
       color: var(--text-dim);
+      font-weight: 700;
     }
 
     .counter {
@@ -98,9 +114,9 @@
       letter-spacing: 0.15em;
       color: var(--text-dim);
       font-variant-numeric: tabular-nums;
+      font-weight: 700;
     }
 
-    /* Progress */
     .progress-bar {
       width: 100%;
       max-width: 920px;
@@ -126,9 +142,9 @@
       text-align: center;
       position: relative;
       z-index: 10;
+      font-weight: 700;
     }
 
-    /* Pair */
     .pair {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -185,19 +201,16 @@
       color: var(--text-secondary);
       opacity: 0;
       transition: opacity 0.2s;
+      font-weight: 700;
     }
     .card:hover .card-label { opacity: 1; }
 
-    /* Bottom actions */
     .bottom-bar {
-      width: 100%;
-      max-width: 920px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 1.5rem;
-      position: relative;
-      z-index: 10;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
     }
 
     .skip-btn {
@@ -211,6 +224,7 @@
       cursor: pointer;
       transition: color 0.2s, border-color 0.2s, background 0.2s;
       backdrop-filter: blur(4px);
+      font-weight: 700;
     }
     .skip-btn:hover {
       color: var(--text-secondary);
@@ -224,6 +238,7 @@
       letter-spacing: 0.2em;
       text-align: center;
       grid-column: 1 / -1;
+      font-weight: 700;
     }
 
     .card-skeleton {
@@ -249,7 +264,6 @@
 </head>
 <body>
 
-  <!-- Background blobs -->
   <div class="bg-blob bg-blob-left" id="blob-left"></div>
   <div class="bg-blob bg-blob-right" id="blob-right"></div>
 
@@ -269,11 +283,11 @@
     <div class="loading">Loading...</div>
   </div>
 
+  </div>
+
   <div class="bottom-bar">
     <button class="skip-btn" id="skip">Skip this pair</button>
   </div>
-
-  </div><!-- end v-center -->
 
   <script>
     const API = '';
@@ -311,10 +325,9 @@
     let choiceHistory = [];
     let choiceLog = [];
     let transitioning = false;
-    let centroidCache = {};  // preloaded on init
+    let centroidCache = {};
 
     async function init() {
-      // Fetch pairs + all 16 centroids in parallel — no per-click API calls
       const aesthetics = Object.keys(COLORS);
       const [pairsRes, ...centroidRes] = await Promise.all([
         fetch(`${API}/api/pairs?n=${TOTAL}`),
@@ -332,7 +345,6 @@
     }
 
     function getCentroid(aesthetic) {
-      // Synchronous — cache is guaranteed populated by init()
       return centroidCache[aesthetic] || null;
     }
 
@@ -342,14 +354,28 @@
       const blobLeft = document.getElementById('blob-left');
       const blobRight = document.getElementById('blob-right');
       blobLeft.style.background = left;
-      blobLeft.style.opacity = '0.12';
+      blobLeft.style.opacity = '0.32';
       blobRight.style.background = right;
-      blobRight.style.opacity = '0.1';
+      blobRight.style.opacity = '0.28';
+    }
+
+    function pulseBlobs() {
+      const blobLeft = document.getElementById('blob-left');
+      const blobRight = document.getElementById('blob-right');
+      [blobLeft, blobRight].forEach(blob => {
+        blob.classList.add('pulse');
+        blob.style.transform = 'scale(1.15)';
+        setTimeout(() => {
+          blob.style.transform = '';
+          setTimeout(() => blob.classList.remove('pulse'), 350);
+        }, 180);
+      });
     }
 
     async function choose(aesthetic) {
       if (transitioning) return;
       transitioning = true;
+      pulseBlobs();
 
       const pairEl = document.getElementById('pair');
       pairEl.classList.add('fading');
@@ -358,7 +384,6 @@
       if (vector) chosenVectors.push(vector);
       choiceHistory.push({ aesthetic, round });
 
-      // Track rejection
       const pair = pairs[round];
       const rejected = pair.left.aesthetic === aesthetic
         ? pair.right.aesthetic
@@ -389,7 +414,6 @@
       document.getElementById('counter').textContent = `${round + 1} / ${TOTAL}`;
       document.getElementById('progress').style.width = `${pct}%`;
 
-      // Update background blobs
       updateBlobs(pair.left.aesthetic, pair.right.aesthetic);
 
       const container = document.getElementById('pair');

@@ -21,7 +21,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-DB_PATH = Path(__file__).parent / "analytics.db"
+DB_PATH = Path("/data/analytics.db")
 
 router = APIRouter()
 

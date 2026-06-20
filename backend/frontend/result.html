@@ -29,7 +29,39 @@
       position: relative;
     }
 
-    /* Grain overlay */
+    /* Background blobs — same drifting, blurred treatment as quiz.html,
+       but colored from the user's own top-3 aesthetics once known (set via
+       JS in renderHero()), rather than a per-round pair like the quiz has. */
+    @keyframes blob-drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(45px, -30px) scale(1.15); }
+      66% { transform: translate(-30px, 35px) scale(0.9); }
+    }
+
+    .bg-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(140px);
+      opacity: 0;
+      transition: background 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 0;
+      animation: blob-drift 14s ease-in-out infinite;
+    }
+    .bg-blob-left {
+      width: 1400px;
+      height: 1400px;
+      top: -500px;
+      left: -500px;
+    }
+    .bg-blob-right {
+      width: 1300px;
+      height: 1300px;
+      bottom: -500px;
+      right: -500px;
+      animation-delay: -7s;
+    }
+
     body::before {
       content: '';
       position: fixed;
@@ -42,7 +74,6 @@
       background-size: 128px 128px;
     }
 
-    /* Nav */
     .nav {
       display: flex;
       align-items: center;
@@ -70,20 +101,21 @@
     }
     .retake:hover { color: var(--text-secondary); border-color: #aaa; }
 
-    /* Section label */
     .section-label {
-      font-size: 0.58rem;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: var(--text-dim);
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--text-primary);
       margin-bottom: 1.5rem;
     }
 
     .divider {
       max-width: 1100px;
-      margin: 4rem auto;
-      height: 1px;
-      background: var(--border);
+      margin: 4.5rem auto;
+      height: 2px;
+      background: var(--text-primary);
+      opacity: 0.08;
     }
 
     /* ── Hero ── */
@@ -105,10 +137,11 @@
     }
 
     .hero-label {
-      font-size: 0.58rem;
-      letter-spacing: 0.35em;
-      text-transform: uppercase;
-      color: var(--text-dim);
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--text-primary);
       margin-bottom: 1rem;
     }
 
@@ -148,267 +181,13 @@
     }
     .hero-image.show { display: block; }
 
-    /* ── DNA bar ── */
-    .dna-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.8s ease 0.1s, transform 0.8s ease 0.1s;
-    }
-    .dna-section.visible { opacity: 1; transform: none; }
-
-    .dna-bar {
-      width: 100%;
-      height: 10px;
-      display: flex;
-      border-radius: 0;
-      overflow: hidden;
-      margin-bottom: 0.6rem;
-    }
-
-    .dna-segment {
-      height: 100%;
-      transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-      width: 0%;
-    }
-
-    .dna-labels {
-      display: flex;
-      gap: 2px;
-      margin-top: 0.6rem;
-      width: 100%;
-    }
-
-    .dna-label-item {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 3px;
-      min-width: 0;
-      overflow: hidden;
-    }
-    .dna-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .dna-label-text {
-      font-size: 0.5rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-    .dna-desc {
-      margin-top: 1rem;
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      max-width: 680px;
-    }
-
-    /* ── Spiral ── */
-    .spiral-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
-    }
-    .spiral-section.visible { opacity: 1; transform: none; }
-
-    #freq-chart {
-      width: 100%;
-      padding: 0.5rem 0;
-    }
-    .freq-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 0.75rem;
-    }
-    .freq-name {
-      font-size: 0.62rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      width: 160px;
-      flex-shrink: 0;
-      text-align: right;
-    }
-    .freq-bar-track {
-      flex: 1;
-      height: 6px;
-      background: var(--surface);
-      border-radius: 0;
-      position: relative;
-    }
-    .freq-bar-fill {
-      height: 100%;
-      border-radius: 0;
-      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-      width: 0%;
-    }
-    .freq-count {
-      font-size: 0.62rem;
-      color: var(--text-dim);
-      width: 28px;
-      flex-shrink: 0;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── Insight block ── */
-    .insight-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4rem;
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
-    }
-    .insight-section.visible { opacity: 1; transform: none; }
-
-    .insight-paragraph {
-      font-size: 1rem;
-      line-height: 1.8;
-      color: var(--text-secondary);
-      font-style: italic;
-    }
-
-    .insight-right {}
-
-    .tension-label {
-      font-size: 0.58rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 1rem;
-    }
-
-    .tension-line {
-      font-size: 1.05rem;
-      line-height: 1.6;
-      color: var(--text-primary);
-      margin-bottom: 2.5rem;
-    }
-
-    .consistency-label {
-      font-size: 0.58rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 0.8rem;
-    }
-
-    .consistency-score {
-      font-size: 3.5rem;
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      color: var(--text-primary);
-      line-height: 1;
-      margin-bottom: 0.5rem;
-    }
-
-    .consistency-desc {
-      font-size: 0.82rem;
-      color: var(--text-secondary);
-      line-height: 1.5;
-    }
-
-    /* Advanced analysis */
-    .advanced-section {
-      max-width: 1100px;
-      margin: 0 auto;
-      opacity: 1;
-    }
-    .adv-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4rem;
-    }
-    .adv-block { padding: 0; }
-    .adv-desc {
-      font-size: 0.78rem;
-      color: var(--text-secondary);
-      line-height: 1.6;
-      margin-bottom: 1.5rem;
-    }
-    .nearest-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 3px;
-    }
-    .nearest-item { position: relative; }
-    .nearest-item img {
-      width: 100%;
-      aspect-ratio: 3/4;
-      object-fit: cover;
-      display: block;
-      border: 1px solid var(--border);
-      filter: grayscale(8%);
-      transition: filter 0.2s;
-    }
-    .nearest-item:hover img { filter: grayscale(0%); }
-    .nearest-label {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 1.5rem 0.4rem 0.4rem;
-      background: linear-gradient(transparent, rgba(245,240,232,0.92));
-      font-size: 0.48rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .nearest-item:hover .nearest-label { opacity: 1; }
-    .rejection-list { display: flex; flex-direction: column; gap: 0.7rem; }
-    .rejection-row { display: flex; align-items: center; gap: 0.8rem; }
-    .rej-name {
-      font-size: 0.62rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      width: 150px;
-      flex-shrink: 0;
-    }
-    .rej-bar-track { flex: 1; height: 4px; background: var(--surface); }
-    .rej-bar-fill { height: 100%; transition: width 1s cubic-bezier(0.16,1,0.3,1); width: 0%; opacity: 0.6; }
-    .rej-count { font-size: 0.6rem; color: var(--text-dim); width: 70px; text-align: right; flex-shrink: 0; }
-    .rej-tag {
-      font-size: 0.48rem;
-      letter-spacing: 0.15em;
-      padding: 0.15rem 0.4rem;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      flex-shrink: 0;
-    }
-    .never-chosen { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-    .never-label { font-size: 0.55rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.6rem; }
-    .never-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .never-tag {
-      font-size: 0.52rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      border: 1px solid var(--border);
-      padding: 0.2rem 0.6rem;
-    }
-
-    /* ── Fibonacci ── */
+    /* ── Fibonacci (now promoted to position 2) ── */
     .fib-section {
       max-width: 1100px;
       margin: 0 auto;
       opacity: 0;
       transform: translateY(12px);
-      transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+      transition: opacity 0.8s ease 0.1s, transform 0.8s ease 0.1s;
     }
     .fib-section.visible { opacity: 1; transform: none; }
 
@@ -484,7 +263,7 @@
     .fib-box-small .fib-score { font-size: 1.5rem; }
     .fib-box-small .fib-name { font-size: 0.58rem; }
 
-    /* ── UMAP + Moodboard ── */
+    /* ── UMAP + Moodboard (now promoted to position 3) ── */
     .bottom-columns {
       max-width: 1100px;
       margin: 0 auto;
@@ -494,7 +273,7 @@
       align-items: start;
       opacity: 0;
       transform: translateY(12px);
-      transition: opacity 0.8s ease 0.5s, transform 0.8s ease 0.5s;
+      transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
     }
     .bottom-columns.visible { opacity: 1; transform: none; }
 
@@ -536,6 +315,230 @@
     .moodboard-credit a { color: var(--text-dim); text-decoration: none; }
     .moodboard-credit a:hover { color: var(--text-secondary); }
 
+    /* ── Advanced analysis (now position 4 — visually quieter:
+         smaller image grid, tighter type, less section-label weight
+         than fib-grid/UMAP above it) ── */
+    .advanced-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s;
+    }
+    .advanced-section.visible { opacity: 1; transform: none; }
+
+    .advanced-section .section-label {
+      font-size: 1rem; /* readable, but a step below the 1.3rem baseline used by Fib Grid/UMAP above it */
+      font-weight: 600;
+      text-transform: none;
+      color: var(--text-secondary);
+    }
+
+    .adv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem; /* tighter than the 4rem used by fib/UMAP sections */
+    }
+    .adv-desc {
+      font-size: 0.74rem; /* slightly smaller than the page's usual 0.78rem body copy */
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1.2rem;
+    }
+    .nearest-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
+    }
+    .nearest-item { position: relative; }
+    .nearest-item img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      display: block;
+      border: 1px solid var(--border);
+      filter: grayscale(8%);
+      transition: filter 0.2s;
+    }
+    .nearest-item:hover img { filter: grayscale(0%); }
+    .nearest-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 1.5rem 0.4rem 0.4rem;
+      background: linear-gradient(transparent, rgba(245,240,232,0.92));
+      font-size: 0.48rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .nearest-item:hover .nearest-label { opacity: 1; }
+    .rejection-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .rejection-row { display: flex; align-items: center; gap: 0.7rem; }
+    .rej-name {
+      font-size: 0.58rem; /* slightly smaller than the prior 0.62rem */
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      width: 140px;
+      flex-shrink: 0;
+    }
+    .rej-bar-track { flex: 1; height: 3px; background: var(--surface); }
+    .rej-bar-fill { height: 100%; transition: width 1s cubic-bezier(0.16,1,0.3,1); width: 0%; opacity: 0.55; }
+    .rej-count { font-size: 0.56rem; color: var(--text-dim); width: 65px; text-align: right; flex-shrink: 0; }
+    .rej-tag {
+      font-size: 0.46rem;
+      letter-spacing: 0.15em;
+      padding: 0.12rem 0.35rem;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .never-chosen { margin-top: 1.2rem; padding-top: 0.8rem; border-top: 1px solid var(--border); }
+    .never-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem; }
+    .never-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .never-tag {
+      font-size: 0.48rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.18rem 0.5rem;
+    }
+
+    /* ── Deeper analysis toggle (collapsed frequency + insight) ── */
+    .deeper-toggle-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .deeper-toggle-btn {
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      background: none;
+      padding: 0.7rem 1.8rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .deeper-toggle-btn:hover { color: var(--text-secondary); border-color: #aaa; }
+    .deeper-toggle-btn .arrow { display: inline-block; transition: transform 0.3s ease; margin-left: 0.4rem; }
+    .deeper-toggle-btn.open .arrow { transform: rotate(180deg); }
+
+    .deeper-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, margin 0.5s ease;
+    }
+    .deeper-content.open {
+      max-height: 3000px; /* generous cap so content of varying length isn't clipped */
+      opacity: 1;
+      margin-top: 3rem;
+    }
+
+    /* ── Spiral (frequency chart) — now inside deeper-content ── */
+    #freq-chart {
+      width: 100%;
+      padding: 0.5rem 0;
+    }
+    .freq-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .freq-name {
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      width: 160px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .freq-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface);
+      border-radius: 0;
+      position: relative;
+    }
+    .freq-bar-fill {
+      height: 100%;
+      border-radius: 0;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+      width: 0%;
+    }
+    .freq-count {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      width: 28px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Insight block — now inside deeper-content ── */
+    .insight-section {
+      max-width: 1100px;
+      margin: 3rem auto 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+    }
+
+    .insight-paragraph {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .tension-label {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    .tension-line {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: var(--text-primary);
+      margin-bottom: 2.5rem;
+    }
+
+    .consistency-label {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      color: var(--text-primary);
+      margin-bottom: 0.8rem;
+    }
+
+    .consistency-score {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .consistency-desc {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
     /* ── Actions ── */
     .actions {
       max-width: 1100px;
@@ -559,10 +562,47 @@
     .action-btn.primary { color: var(--text-secondary); border-color: #aaa; }
     .action-btn.primary:hover { color: var(--text-primary); border-color: var(--text-primary); }
 
-    /* Share card — receipt */
-    #share-card {
+    /* Card modal overlay — dims the page and centers the share card with
+       a download button, replacing the old instant-download-with-invisible-
+       flash behavior. */
+    .card-modal-overlay {
+      display: none;
       position: fixed;
-      left: -9999px; top: 0;
+      inset: 0;
+      background: rgba(26,24,21,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .card-modal-overlay.open { display: flex; }
+
+    .card-modal-actions {
+      display: flex;
+      gap: 0.6rem;
+    }
+    .card-modal-btn {
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.6rem 1.4rem;
+      border: 1px solid var(--bg);
+      background: none;
+      color: var(--bg);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .card-modal-btn.primary {
+      background: var(--bg);
+      color: var(--text-primary);
+    }
+    .card-modal-btn:hover { opacity: 0.85; }
+
+    /* Share card — receipt. No longer pinned off-screen permanently; it
+       lives inside #card-modal-overlay and is only ever shown when that
+       modal is open. */
+    #share-card {
       width: 480px;
       background: #1A1815;
       font-family: 'Courier New', Courier, monospace;
@@ -574,7 +614,6 @@
       padding: 32px 28px 28px;
       position: relative;
     }
-    /* Torn top edge */
     .rc-inner::before {
       content: '';
       display: block;
@@ -701,7 +740,6 @@
       font-weight: 700;
       color: #1A1815;
     }
-    /* DNA swatch bar */
     .rc-swatch {
       display: flex;
       height: 4px;
@@ -709,7 +747,6 @@
       gap: 1px;
     }
     .rc-swatch-seg { height: 100%; }
-    /* Barcode */
     .rc-barcode-num {
       text-align: center;
       font-size: 8px;
@@ -736,7 +773,6 @@
       text-transform: uppercase;
     }
 
-        /* Loading */
     .loading-state {
       max-width: 1100px;
       margin: 10rem auto;
@@ -758,8 +794,7 @@
       .hero-top { flex-direction: column; }
       .insight-section,
       .bottom-columns,
-      .adv-grid,
-      #advanced-section > div { grid-template-columns: 1fr !important; gap: 2rem !important; }
+      .adv-grid { grid-template-columns: 1fr !important; gap: 2rem !important; }
       .fib-row-1 { grid-template-columns: 1fr; }
       .fib-right-stack { grid-template-rows: auto; }
       .fib-row-2 { grid-template-columns: 1fr 1fr; }
@@ -777,6 +812,9 @@
 </head>
 <body>
 
+  <div class="bg-blob bg-blob-left" id="blob-left"></div>
+  <div class="bg-blob bg-blob-right" id="blob-right"></div>
+
   <nav class="nav">
     <a class="logo" href="/">◈ KANSEI</a>
     <div style="display:flex;gap:0.8rem;align-items:center">
@@ -791,7 +829,7 @@
 
   <div id="content" style="display:none">
 
-    <!-- Hero -->
+    <!-- 1. Hero -->
     <div class="hero" id="hero">
       <div class="hero-top">
         <div class="hero-left">
@@ -806,60 +844,7 @@
 
     <div class="divider"></div>
 
-    <!-- DNA Bar -->
-    <div class="dna-section" id="dna-section">
-      <p class="section-label">Aesthetic DNA</p>
-      <div class="dna-bar" id="dna-bar"></div>
-      <div class="dna-labels" id="dna-labels"></div>
-      <p class="dna-desc" id="dna-desc"></p>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Spiral -->
-    <div class="spiral-section" id="spiral-section">
-      <p class="section-label">How often you reached for each aesthetic</p>
-      <div id="freq-chart"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Insight -->
-    <div class="insight-section" id="insight-section">
-      <div>
-        <p class="section-label">Personality insight</p>
-        <p class="insight-paragraph" id="insight-paragraph">—</p>
-      </div>
-      <div class="insight-right">
-        <p class="tension-label">Aesthetic tension</p>
-        <p class="tension-line" id="tension-line">—</p>
-        <p class="consistency-label">Consistency score</p>
-        <div class="consistency-score" id="consistency-score">—</div>
-        <p class="consistency-desc" id="consistency-desc">—</p>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Advanced analysis -->
-    <div id="advanced-section" style="max-width:1100px;margin:0 auto;padding:0 0 2rem 0;visibility:visible !important;opacity:1 !important;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4rem;visibility:visible !important;">
-        <div style="visibility:visible !important;">
-          <p style="font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:#A8A29C;margin-bottom:1rem;visibility:visible !important;">5 images closest to your taste</p>
-          <p style="font-size:0.78rem;color:#6B6560;line-height:1.6;margin-bottom:1.5rem;visibility:visible !important;">These are the individual images from our dataset whose CLIP embeddings are most similar to your mean choice vector.</p>
-          <div id="nearest-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;visibility:visible !important;min-height:180px;"></div>
-        </div>
-        <div style="visibility:visible !important;">
-          <p style="font-size:0.58rem;letter-spacing:0.35em;text-transform:uppercase;color:#A8A29C;margin-bottom:1rem;visibility:visible !important;">What you actively avoided</p>
-          <p style="font-size:0.78rem;color:#6B6560;line-height:1.6;margin-bottom:1.5rem;visibility:visible !important;">Tracking your rejections reveals what you pushed away.</p>
-          <div id="rejection-list" style="display:flex;flex-direction:column;gap:0.6rem;visibility:visible !important;"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Fibonacci -->
+    <!-- 2. Fibonacci grid — promoted, full prominence -->
     <div class="fib-section" id="fib-section">
       <p class="section-label">Aesthetic breakdown</p>
       <div class="fib-row-1">
@@ -880,7 +865,7 @@
 
     <div class="divider"></div>
 
-    <!-- UMAP + Moodboard -->
+    <!-- 3. UMAP + Moodboard — promoted, full prominence -->
     <div class="bottom-columns" id="bottom-cols">
       <div>
         <p class="section-label">Where you land in aesthetic space</p>
@@ -894,10 +879,58 @@
       </div>
     </div>
 
-    <!-- Actions -->
+    <div class="divider"></div>
+
+    <!-- 4. Advanced analysis — visually quieter than the two sections above -->
+    <div class="advanced-section" id="advanced-section">
+      <div class="adv-grid">
+        <div>
+          <p class="section-label">5 images closest to your taste</p>
+          <p class="adv-desc">These are the individual images from our dataset whose CLIP embeddings are most similar to your mean choice vector.</p>
+          <div id="nearest-grid" class="nearest-grid" style="min-height:160px;"></div>
+        </div>
+        <div>
+          <p class="section-label">What you actively avoided</p>
+          <p class="adv-desc">Tracking your rejections reveals what you pushed away.</p>
+          <div id="rejection-list" class="rejection-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 5. Deeper analysis toggle — collapsed frequency chart + insight block -->
+    <div class="deeper-toggle-wrap">
+      <button class="deeper-toggle-btn" id="deeper-toggle">
+        Show deeper analysis <span class="arrow">▾</span>
+      </button>
+    </div>
+
+    <div class="deeper-content" id="deeper-content">
+      <p class="section-label">How often you reached for each aesthetic</p>
+      <div id="freq-chart"></div>
+
+      <div class="insight-section" id="insight-section">
+        <div>
+          <p class="section-label">Personality insight</p>
+          <p class="insight-paragraph" id="insight-paragraph">—</p>
+        </div>
+        <div class="insight-right">
+          <p class="tension-label">Aesthetic tension</p>
+          <p class="tension-line" id="tension-line">—</p>
+          <p class="consistency-label">Consistency score</p>
+          <div class="consistency-score" id="consistency-score">—</div>
+          <p class="consistency-desc" id="consistency-desc">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 6. Actions -->
     <div class="actions">
       <button class="action-btn" onclick="copyResult()">Copy result</button>
-      <button class="action-btn primary" onclick="downloadCard()">Save card ↓</button>
+      <button class="action-btn primary" onclick="openCardModal()">Save card ↓</button>
     </div>
 
     <!-- Explore banner -->
@@ -910,8 +943,10 @@
       <a href="/explore" style="flex-shrink:0;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-primary);border:1px solid var(--text-primary);padding:0.8rem 2rem;text-decoration:none;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--text-primary)';this.style.color='var(--bg)'" onmouseout="this.style.background='';this.style.color='var(--text-primary)'">Explore →</a>
     </div>
 
-    <!-- Share card — receipt -->
-    <div id="share-card">
+    <!-- Share card — receipt, now lives inside a modal that opens on
+         "Save card" click instead of staying permanently off-screen. -->
+    <div class="card-modal-overlay" id="card-modal-overlay">
+      <div id="share-card">
       <div class="rc-inner">
         <div class="rc-header-row">
           <div class="rc-receipt-label">Receipt</div>
@@ -955,12 +990,19 @@
           <span>感性 · aesthetic intelligence</span>
         </div>
       </div>
+      </div>
+
+      <div class="card-modal-actions">
+        <button class="card-modal-btn" onclick="closeCardModal()">Close</button>
+        <button class="card-modal-btn primary" id="modal-download-btn" onclick="confirmDownload()">Download ↓</button>
+      </div>
     </div>
 
   </div>
 
   <script>
     const API = '';
+    const UNSPLASH_KEY = '66xO-AsyUQFPB6i-jmlQnTqUOGz-eKnDxuud25mUYEU';
 
     function getSessionId(){
       let id = sessionStorage.getItem('kansei_sid');
@@ -979,8 +1021,6 @@
       }).catch(() => {});
     }
 
-    const UNSPLASH_KEY = '66xO-AsyUQFPB6i-jmlQnTqUOGz-eKnDxuud25mUYEU';
-
     const COLORS = {
       "afrofuturism":"#9B59B6","boho":"#E67E22","brutalism":"#7F8C8D",
       "coastal cool":"#3498DB","cottagecore":"#4A8A5A","cyber minimalism":"#00CED1",
@@ -990,7 +1030,6 @@
       "wabi sabi":"#7A6A50","zen modern":"#708090",
     };
 
-    // Aesthetic descriptors
     const DESCRIPTORS = {
       "afrofuturism": "Cosmic",
       "boho": "Wandering",
@@ -1010,7 +1049,6 @@
       "zen modern": "Still",
     };
 
-    // Personality paragraphs per aesthetic
     const PERSONALITIES = {
       "afrofuturism": "You exist at the intersection of memory and possibility. Your aesthetic sensibility pulls toward the mythic — richness, power, and a future that doesn't erase where it came from. You're drawn to things that carry weight and tell stories older than themselves.",
       "boho": "You move through the world collecting rather than curating. Your taste is eclectic in the truest sense — not assembled, but accumulated through curiosity. You're drawn to things that have been touched by human hands, by sun, by time.",
@@ -1030,7 +1068,6 @@
       "zen modern": "You design your world around silence. Your aesthetic values the things that aren't there as much as the things that are — empty space, single objects chosen with care, light that does the work. Stillness, for you, is a form of luxury.",
     };
 
-    // Tension pairs (aesthetically opposite)
     const TENSION_PAIRS = [
       ["brutalism", "cottagecore", "Raw concrete and tender gardens — you're pulled between harshness and softness, structure and organic life."],
       ["cyber minimalism", "boho", "Cold precision and wandering eclecticism — your taste exists in the space between system and soul."],
@@ -1073,7 +1110,6 @@
         if (!raw) { window.location.href = '/'; return; }
         const vectors = JSON.parse(raw);
 
-        // Get choice history if available
         const histRaw = sessionStorage.getItem('kansei_choices');
         if (histRaw) choiceHistory = JSON.parse(histRaw);
 
@@ -1110,25 +1146,53 @@
       track('result_viewed', { aesthetic: topAesthetic});
 
       renderHero(scoreData);
-      renderDNA(scoreData.scores);
-      renderFreqChart(choiceHistory, scoreData.scores);
-      renderInsight(scoreData);
-      renderAdvanced(scoreData);
       renderFibGrid(scoreData.scores);
       renderUMAP(umapData, scoreData);
       await renderMoodboard(scoreData.top);
+      renderAdvanced(scoreData);
+      renderFreqChart(choiceHistory, scoreData.scores);
+      renderInsight(scoreData);
       renderShareCard(scoreData);
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('content').style.display = 'block';
 
       requestAnimationFrame(() => {
-        const sections = ['hero', 'dna-section', 'spiral-section', 'insight-section', 'advanced-section', 'fib-section', 'bottom-cols'];
+        // Sections in display order — DNA bar removed entirely. Frequency
+        // chart and insight live inside #deeper-content, which fades in
+        // via its own toggle-driven CSS transition, not this stagger.
+        const sections = ['hero', 'fib-section', 'bottom-cols', 'advanced-section'];
         sections.forEach((id, i) => {
           setTimeout(() => document.getElementById(id).classList.add('visible'), i * 120);
         });
-        setTimeout(() => animateBars(), 500);
-        setTimeout(() => animateDNA(scoreData.scores), 300);
+        setTimeout(() => animateBars(), 400);
+      });
+
+      setupDeeperToggle();
+    }
+
+    function setupDeeperToggle() {
+      const btn = document.getElementById('deeper-toggle');
+      const content = document.getElementById('deeper-content');
+      let opened = false;
+
+      btn.addEventListener('click', () => {
+        opened = !opened;
+        btn.classList.toggle('open', opened);
+        content.classList.toggle('open', opened);
+        btn.firstChild.textContent = opened ? 'Hide deeper analysis ' : 'Show deeper analysis ';
+
+        if (opened) {
+          track('advanced_viewed');
+          // Animate frequency bars + insight reveal only once content is
+          // actually expanding, so the animation is visible rather than
+          // running while max-height is still 0.
+          setTimeout(() => {
+            document.querySelectorAll('.freq-bar-fill').forEach(bar => {
+              bar.style.width = bar.dataset.pct + '%';
+            });
+          }, 350);
+        }
       });
     }
 
@@ -1137,46 +1201,22 @@
       document.getElementById('hero-title').style.color = COLORS[data.top] || '#1A1815';
       document.getElementById('hero-word').textContent = DESCRIPTORS[data.top] || '';
       document.getElementById('hero-desc').textContent = data.description;
-    }
 
-    function renderDNA(scores) {
-      const bar = document.getElementById('dna-bar');
-      const labels = document.getElementById('dna-labels');
-      const entries = Object.entries(scores);
-      const total = entries.reduce((s, [, v]) => s + v, 0);
-
-      bar.innerHTML = entries.map(([aesthetic, pct]) => {
-        const w = (pct / total) * 100;
-        const color = COLORS[aesthetic] || '#888';
-        return `<div class="dna-segment" data-w="${w}" style="background:${color};opacity:0.85" title="${aesthetic}: ${Math.round(pct)}%"></div>`;
-      }).join('');
-
-      // Description
-      const descEl = document.getElementById('dna-desc');
-      if (descEl) {
-        const top3 = entries.slice(0, 3).map(([a]) => capitalize(a));
-        descEl.textContent = `Each color segment represents one of 16 aesthetics, sized by how strongly your choices aligned with it. Your palette is led by ${top3[0]}, ${top3[1]}, and ${top3[2]}.`;
-      }
-
-      // Labels with color dots
-      labels.innerHTML = entries.map(([aesthetic, pct]) => {
-        const color = COLORS[aesthetic] || '#888';
-        const w = (pct / total) * 100;
-        return `<div class="dna-label-item" style="flex:${w}"><span class="dna-dot" style="background:${color}"></span><span class="dna-label-text">${aesthetic}</span></div>`;
-      }).join('');
-    }
-
-    function animateDNA(scores) {
-      document.querySelectorAll('.dna-segment').forEach(seg => {
-        seg.style.transition = 'width 1.2s cubic-bezier(0.16,1,0.3,1)';
-        seg.style.width = seg.dataset.w + '%';
-      });
+      // Color the background blobs from the user's own top-2 aesthetics —
+      // result.html has no per-round "pair" the way quiz.html does, so the
+      // most honest source of color here is the actual result itself.
+      const ranked = Object.keys(data.scores);
+      const blobLeft = document.getElementById('blob-left');
+      const blobRight = document.getElementById('blob-right');
+      blobLeft.style.background = COLORS[ranked[0]] || '#D4CEC4';
+      blobLeft.style.opacity = '0.32';
+      blobRight.style.background = COLORS[ranked[1]] || '#D4CEC4';
+      blobRight.style.opacity = '0.28';
     }
 
     function renderFreqChart(history, scores) {
       const container = document.getElementById('freq-chart');
 
-      // Count picks from real history or simulate from scores
       const counts = {};
       Object.keys(scores).forEach(a => counts[a] = 0);
 
@@ -1186,7 +1226,6 @@
           if (counts[a] !== undefined) counts[a]++;
         });
       } else {
-        // Simulate from scores proportionally across 25 rounds
         const entries = Object.entries(scores);
         const total = entries.reduce((s, [,v]) => s + v, 0);
         let assigned = 0;
@@ -1199,7 +1238,6 @@
         });
       }
 
-      // Sort by count descending, filter zeros
       const sorted = Object.entries(counts)
         .filter(([, c]) => c > 0)
         .sort((a, b) => b[1] - a[1]);
@@ -1219,23 +1257,12 @@
             <div class="freq-count">${times}</div>
           </div>`;
       }).join('');
-
-      // Animate bars
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          container.querySelectorAll('.freq-bar-fill').forEach(bar => {
-            bar.style.width = bar.dataset.pct + '%';
-          });
-        }, 400);
-      });
     }
 
     function renderInsight(data) {
-      // Personality paragraph
       document.getElementById('insight-paragraph').textContent =
         PERSONALITIES[data.top] || 'Your aesthetic sensibility is uniquely your own.';
 
-      // Tension — find top 2 aesthetics and see if they match a tension pair
       const top2 = Object.keys(data.scores).slice(0, 2);
       let tensionText = null;
       for (const [a, b, text] of TENSION_PAIRS) {
@@ -1249,7 +1276,6 @@
       document.getElementById('tension-line').textContent =
         tensionText || `You lean decisively toward ${capitalize(data.top)} — your aesthetic identity is focused rather than fragmented.`;
 
-      // Consistency score
       const scoreVals = Object.values(data.scores);
       const max = scoreVals[0], min = scoreVals[scoreVals.length - 1];
       const spread = max - min;
@@ -1396,9 +1422,7 @@
       }
     }
 
-
-        function renderAdvanced(data) {
-      // kNN nearest images
+    function renderAdvanced(data) {
       const nearest = data.nearest || [];
       const nearestGrid = document.getElementById('nearest-grid');
       if (nearestGrid && nearest.length > 0) {
@@ -1411,7 +1435,6 @@
         `).join('');
       }
 
-      // Rejection analysis
       const rejList = document.getElementById('rejection-list');
       if (rejList && data.rejections) {
         const rej = data.rejections;
@@ -1421,7 +1444,6 @@
         const mostAvoided = rej.most_avoided || [];
         const neverChosen = rej.never_chosen || [];
 
-        // Show all aesthetics with rejections
         const allRej = Object.entries(rej.rejection_counts || {})
           .filter(([,c]) => c > 0)
           .sort((a,b) => b[1]-a[1]);
@@ -1441,7 +1463,6 @@
             </div>`;
         }).join('');
 
-        // Never chosen section
         if (neverChosen.length > 0) {
           rejList.innerHTML += `
             <div class="never-chosen">
@@ -1452,7 +1473,6 @@
             </div>`;
         }
 
-        // Animate rejection bars
         setTimeout(() => {
           rejList.querySelectorAll('.rej-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.w + '%';
@@ -1462,8 +1482,6 @@
       } else if (rejList) {
         rejList.innerHTML = '<p style="font-size:0.72rem;color:var(--text-dim)">Rejection data available after taking the quiz.</p>';
       }
-
-      track('advanced_viewed');
     }
 
     function drawBarcode(seed) {
@@ -1473,7 +1491,6 @@
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.setAttribute('preserveAspectRatio', 'none');
 
-      // Seeded pseudo-random bar widths (1-3px) with gaps (1-2px)
       let x = 0, rects = '';
       let s = seed || 12345;
       function rand() { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; }
@@ -1482,17 +1499,16 @@
         const barW = Math.floor(rand() * 3) + 1;
         rects += `<rect x="${x}" y="0" width="${barW}" height="${H}" fill="#1A1815"/>`;
         x += barW;
-        x += Math.floor(rand() * 2) + 1; // gap
+        x += Math.floor(rand() * 2) + 1;
       }
       svg.innerHTML = rects;
     }
 
-        function renderShareCard(data) {
+    function renderShareCard(data) {
       const color = COLORS[data.top] || '#1A1815';
       const now = new Date();
       const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
 
-      // Header
       document.getElementById('sc-title').textContent = capitalize(data.top);
       document.getElementById('sc-title').style.color = color;
       document.getElementById('sc-word').textContent = DESCRIPTORS[data.top] || '';
@@ -1501,13 +1517,11 @@
       document.getElementById('sc-total').textContent = capitalize(data.top);
       document.getElementById('sc-total').style.color = color;
 
-      // Receipt number from top score
       const topScore = Math.round(Object.values(data.scores)[0]);
       document.getElementById('sc-number').textContent = String(topScore).padStart(6, '0');
       document.getElementById('sc-barcode-num').textContent = `感 · 性 · ${now.getFullYear()}`;
       drawBarcode(topScore * 997 + data.top.length * 31);
 
-      // Line items — top 5 aesthetics
       const entries = Object.entries(data.scores).slice(0, 5);
       document.getElementById('sc-scores').innerHTML = entries.map(([aesthetic, pct], i) => {
         const c = COLORS[aesthetic] || '#1A1815';
@@ -1523,7 +1537,6 @@
           </div>`;
       }).join('');
 
-      // DNA swatch
       const allEntries = Object.entries(data.scores);
       const total = allEntries.reduce((s,[,v]) => s+v, 0);
       document.getElementById('sc-swatch').innerHTML = allEntries.map(([a, v]) => {
@@ -1532,20 +1545,24 @@
       }).join('');
     }
 
-    async function downloadCard() {
-      const btn = document.querySelector('.action-btn.primary');
+    function openCardModal() {
+      // The card is real, live HTML/CSS — no canvas generation happens
+      // here. We're just making the already-rendered #share-card visible
+      // inside the modal so the person can actually look at it before
+      // deciding to download anything.
+      track('share_card_generated');
+      document.getElementById('card-modal-overlay').classList.add('open');
+    }
+
+    function closeCardModal() {
+      document.getElementById('card-modal-overlay').classList.remove('open');
+    }
+
+    async function confirmDownload() {
+      const btn = document.getElementById('modal-download-btn');
+      const originalText = btn.textContent;
       btn.textContent = 'Generating...';
       const card = document.getElementById('share-card');
-
-      // Move card into visible DOM temporarily (html2canvas needs it painted)
-      card.style.position = 'fixed';
-      card.style.left = '0';
-      card.style.top = '0';
-      card.style.zIndex = '9999';
-      card.style.pointerEvents = 'none';
-
-      // Wait a tick for layout
-      await new Promise(r => setTimeout(r, 150));
 
       try {
         const canvas = await html2canvas(card, {
@@ -1556,31 +1573,22 @@
           logging: false,
           imageTimeout: 0,
           onclone: (clonedDoc) => {
-            // Remove any images that might fail CORS — card doesn't have images anyway
             const imgs = clonedDoc.querySelectorAll('img');
             imgs.forEach(img => { if (!img.src.startsWith('data:')) img.style.display = 'none'; });
           }
         });
 
-        track('share_card_generated');
-
         const link = document.createElement('a');
         link.download = `kansei-${topAesthetic.replace(/ /g, '-')}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-        track('share_card_downloaded', { aesthetic:topAesthetic});
+        track('share_card_downloaded', { aesthetic: topAesthetic });
       } catch(e) {
         console.error('Share card error:', e);
         alert('Could not generate card. Try again.');
       }
 
-      // Restore hidden
-      card.style.position = 'fixed';
-      card.style.left = '-9999px';
-      card.style.top = '0';
-      card.style.zIndex = '';
-      card.style.pointerEvents = '';
-      btn.textContent = 'Save card ↓';
+      btn.textContent = originalText;
     }
 
     function copyResult() {
