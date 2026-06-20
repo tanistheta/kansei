@@ -22,7 +22,11 @@ from core import (
     AESTHETIC_COLORS,
 )
 
+from analytics import router as analytics_router
+
 app = FastAPI()
+
+app.include_router(analytics_router)
 
 app.add_middleware(
     CORSMiddleware,

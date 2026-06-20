@@ -279,6 +279,23 @@
     const API = '';
     const TOTAL = 25;
 
+    function getSessionId() {
+      let id = sessionStorage.getItem('kansei_sid');
+      if(!id){
+        id = crypto.randomUUID();
+        sessionStorage.setItem('kansei_sid', id);
+      }
+      return id;
+    }
+
+    function track(eventName, meta = null) {
+      fetch('/api/event', {
+        method: 'POST',
+        headers: { 'Content-Type' : 'application/json'},
+        body: JSON.stringify({ session_id: getSessionId(), event_name: eventName, meta})
+      }).catch(() => {});
+    }
+
     const COLORS = {
       "afrofuturism":"#9B59B6","boho":"#E67E22","brutalism":"#7F8C8D",
       "coastal cool":"#3498DB","cottagecore":"#4A8A5A","cyber minimalism":"#00CED1",
@@ -310,6 +327,7 @@
       const centroidData = await Promise.all(centroidRes.map(r => r.json()));
       aesthetics.forEach((a, i) => { centroidCache[a] = centroidData[i].vector; });
 
+      track('session_start');
       renderRound();
     }
 
@@ -355,6 +373,7 @@
         sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
         sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
         sessionStorage.setItem('kansei_choice_log', JSON.stringify(choiceLog));
+        track('quiz_complete');
         window.location.href = '/result';
       } else {
         renderRound();
@@ -410,6 +429,7 @@
         sessionStorage.setItem('kansei_vectors', JSON.stringify(chosenVectors));
         sessionStorage.setItem('kansei_choices', JSON.stringify(choiceHistory));
         sessionStorage.setItem('kansei_choice_log', JSON.stringify(choiceLog));
+        track('quiz_complete');
         window.location.href = '/result';
       } else {
         renderRound();

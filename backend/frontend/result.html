@@ -961,6 +961,24 @@
 
   <script>
     const API = '';
+
+    function getSessionId(){
+      let id = sessionStorage.getItem('kansei_sid');
+      if(!id){
+        id = crypto.randomUUID();
+        sessionStorage.setItem('kansei_sid', id);
+      }
+      return id;
+    }
+
+    function track(eventName, meta = null){
+      fetch('/api/event',{
+        method:'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: getSessionId(), event_name: eventName, meta})
+      }).catch(() => {});
+    }
+
     const UNSPLASH_KEY = '66xO-AsyUQFPB6i-jmlQnTqUOGz-eKnDxuud25mUYEU';
 
     const COLORS = {
@@ -1088,6 +1106,8 @@
       topAesthetic = scoreData.top;
       topColor = scoreData.color;
       allScores = scoreData.scores;
+
+      track('result_viewed', { aesthetic: topAesthetic});
 
       renderHero(scoreData);
       renderDNA(scoreData.scores);
@@ -1442,6 +1462,8 @@
       } else if (rejList) {
         rejList.innerHTML = '<p style="font-size:0.72rem;color:var(--text-dim)">Rejection data available after taking the quiz.</p>';
       }
+
+      track('advanced_viewed');
     }
 
     function drawBarcode(seed) {
@@ -1540,10 +1562,13 @@
           }
         });
 
+        track('share_card_generated');
+
         const link = document.createElement('a');
         link.download = `kansei-${topAesthetic.replace(/ /g, '-')}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
+        track('share_card_downloaded', { aesthetic:topAesthetic});
       } catch(e) {
         console.error('Share card error:', e);
         alert('Could not generate card. Try again.');
