@@ -310,10 +310,12 @@ def get_moodboard(aesthetic: str, n: int = 4) -> list[str]:
 
 @lru_cache(maxsize=1)
 def get_clip_model():
-    import clip
+    import open_clip
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, preprocess = clip.load("ViT-B/32", device=device)
+    model, _ , preprocess = open_clip.create_model_and_transforms("ViT-B-32", pretrained="openai")
+    model = model.to(device)
+    model.eval()
     return model, preprocess, device
 
 
