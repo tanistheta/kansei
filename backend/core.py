@@ -315,6 +315,7 @@ def get_clip_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, _ , preprocess = open_clip.create_model_and_transforms("ViT-B-32", pretrained="openai")
     model = model.to(device)
+    model=model.half()
     model.eval()
     return model, preprocess, device
 
@@ -326,7 +327,7 @@ def classify_image(image_bytes: bytes) -> dict:
 
     model, preprocess, device = get_clip_model()
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    tensor = preprocess(image).unsqueeze(0).to(device)
+    tensor = preprocess(image).unsqueeze(0).to(device).half()
 
     with torch.no_grad():
         embedding = model.encode_image(tensor)
