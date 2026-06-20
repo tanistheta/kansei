@@ -340,9 +340,20 @@ def classify_image(image_bytes: bytes) -> dict:
         Path(tmp_path).unlink(missing_ok=True)
 
     if result.returncode != 0:
-        raise RuntimeError(f"classify_worker failed: {result.stderr}")
+        raise RuntimeError(f"classify_worker failed (exit {result.returncode}): {result.stderr}")
 
-    output = json.loads(result.stdout.strip().splitlines()[-1])
+    # stdout may have warning/progress noise mixed in (tqdm, FutureWarning, etc.)
+    # even on success — find the actual JSON line by looking for one that starts with '{'
+    output = None
+    for line in result.stdout.strip().splitlines():
+        line = line.strip()
+        if line.startswith("{"):
+            output = json.loads(line)
+            break
+
+    if output is None:
+        raise RuntimeError(f"classify_worker produced no JSON output. stdout: {result.stdout!r} stderr: {result.stderr!r}")
+
     if "error" in output:
         raise RuntimeError(f"classify_worker error: {output['error']}")
 
