@@ -233,6 +233,37 @@
     .entry-upload.dragover { background: var(--surface); }
     .entry-upload.dragover .entry-arrow { color: var(--text-secondary); }
 
+    /* Disabled / coming-soon state for the classify entry — visible,
+       honest about its status, no longer clickable or draggable. The
+       cursor and hover background are switched off so it doesn't invite
+       interaction it can't fulfill, and a small badge replaces the arrow
+       to make the status legible at a glance rather than discovered by
+       failure. */
+    .entry-upload.disabled {
+      cursor: default;
+    }
+    .entry-upload.disabled:hover {
+      background: none;
+    }
+    .entry-upload.disabled .entry-title,
+    .entry-upload.disabled .entry-desc {
+      opacity: 0.45;
+    }
+    .entry-upload.disabled .entry-arrow {
+      display: none;
+    }
+    .soon-badge {
+      position: absolute;
+      bottom: 2.5rem;
+      right: 2.5rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.8rem;
+    }
+
     /* Footer */
     footer {
       display: flex;
@@ -273,7 +304,7 @@
         <p class="hero-tag">What pulls you in?</p>
         <h1>Know your aesthetic.</h1>
         <p class="hero-sub">
-          25 image pairs reveal your visual identity across 16 distinct aesthetics — or drop any photo for an instant read.
+          25 image pairs reveal your visual identity across 16 distinct aesthetics.
         </p>
       </div>
       <div class="hero-bottom">
@@ -303,15 +334,19 @@
         <span class="entry-arrow">↗</span>
       </a>
 
-      <div class="entry entry-upload" id="upload-zone">
+      <!-- Classify-an-image entry — disabled. Root cause: CLIP inference
+           exceeds the hosting container's memory ceiling (confirmed via
+           OOM kill, exit -9, after both an import fix and an fp16
+           quantization attempt). The real fix is a separate inference
+           service with its own memory budget, which is real
+           infrastructure work, not a quick patch — so for now this is
+           honestly marked unavailable instead of silently failing on
+           click, which was actively costing first impressions. -->
+      <div class="entry entry-upload disabled" id="upload-zone">
         <span class="entry-num">02</span>
         <div class="entry-title">Classify an image</div>
         <p class="entry-desc">Drop any photo — a room, outfit, artwork, screenshot. CLIP reads its visual DNA and maps it instantly across all 16 aesthetics.</p>
-        <span class="entry-arrow">↑</span>
-        <div class="upload-overlay" id="upload-overlay">
-          <div class="upload-spinner"></div>
-          <span class="upload-text">Classifying...</span>
-        </div>
+        <span class="soon-badge">Coming soon</span>
       </div>
     </div>
   </main>
@@ -321,45 +356,5 @@
     <span class="footer-text">v1.0 · 2026</span>
   </footer>
 
-  <input type="file" id="file-input" accept="image/*" />
-
-  <script>
-    const API = '';
-    const zone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
-    const overlay = document.getElementById('upload-overlay');
-
-    zone.addEventListener('click', () => fileInput.click());
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', e => {
-      e.preventDefault();
-      zone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) classify(file);
-    });
-    fileInput.addEventListener('change', () => { if (fileInput.files[0]) classify(fileInput.files[0]); });
-
-    async function classify(file) {
-      overlay.classList.add('active');
-      const reader = new FileReader();
-      reader.onload = async () => {
-        sessionStorage.setItem('kansei_uploaded_image', reader.result);
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-          const res = await fetch(`${API}/api/classify`, { method: 'POST', body: formData });
-          const data = await res.json();
-          sessionStorage.setItem('kansei_classify_result', JSON.stringify(data));
-          sessionStorage.setItem('kansei_source', 'classify');
-          window.location.href = '/result';
-        } catch {
-          overlay.classList.remove('active');
-          alert('Something went wrong. Make sure the server is running.');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  </script>
 </body>
 </html>
