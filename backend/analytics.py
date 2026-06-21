@@ -83,10 +83,29 @@ async def summary():
         GROUP BY event_name
         ORDER BY count DESC
     """).fetchall()
+
+    # Share rate: % of completed quizzes that also generated a share card,
+    # counted by distinct session so opening the modal twice in one
+    # session still only counts once.
+    share_row = conn.execute("""
+        SELECT
+          COUNT(DISTINCT CASE WHEN event_name = 'quiz_complete' THEN session_id END) AS completions,
+          COUNT(DISTINCT CASE WHEN event_name = 'share_card_generated' THEN session_id END) AS shares
+        FROM events
+    """).fetchone()
     conn.close()
+
+    completions, shares = share_row
+    share_rate_pct = round(100.0 * shares / completions, 1) if completions else None
+
     return {
         "funnel": [
             {"event": r[0], "total": r[1], "unique_sessions": r[2]}
             for r in rows
-        ]
+        ],
+        "share_rate": {
+            "completions": completions,
+            "shares": shares,
+            "share_rate_pct": share_rate_pct
+        }
     }

@@ -181,6 +181,124 @@
     }
     .hero-image.show { display: block; }
 
+    /* ── Hero share preview — compact, live receipt-style card shown
+         immediately next to the result, so the share feature is never
+         missed below the fold. Clicking it (or its CTA) opens the same
+         full-size #card-modal-overlay used by the bottom "Save card"
+         button — this is a second entry point, not a separate feature. */
+    .hero-share {
+      flex-shrink: 0;
+      width: 260px;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hero-share:hover { transform: translateY(-3px); }
+
+    .hero-share-card {
+      width: 100%;
+      background: #1A1815;
+      padding: 16px;
+      border-radius: 2px;
+    }
+    .hero-share-inner {
+      background: #F7F3EC;
+      padding: 22px 18px 20px;
+      position: relative;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .hero-share-inner::before {
+      content: '';
+      display: block;
+      height: 8px;
+      background: repeating-linear-gradient(
+        90deg,
+        #F7F3EC 0px, #F7F3EC 8px,
+        transparent 8px, transparent 11px
+      );
+      position: absolute;
+      top: -8px; left: 0; right: 0;
+    }
+    .hero-share-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #6B6560;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .hero-share-name {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .hero-share-word {
+      font-size: 7px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #A8A29C;
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+    .hero-share-dots {
+      border-top: 1px dashed #C8C2B8;
+      margin: 10px 0;
+    }
+    .hero-share-scores {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin: 10px 0;
+    }
+    .hero-share-score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .hero-share-score-name {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #1A1815;
+    }
+    .hero-share-score-val {
+      font-size: 10px;
+      font-weight: 700;
+      color: #1A1815;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .hero-share-swatch {
+      display: flex;
+      height: 4px;
+      margin-top: 12px;
+      gap: 1px;
+    }
+    .hero-share-cta {
+      margin-top: 0.6rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: color 0.2s;
+    }
+    .hero-share:hover .hero-share-cta { color: var(--text-secondary); }
+
+    @media (max-width: 700px) {
+      .hero-share { width: 170px; }
+      .hero-share-name { font-size: 11px; }
+    }
+
     /* ── Fibonacci (now promoted to position 2) ── */
     .fib-section {
       max-width: 1100px;
@@ -838,6 +956,26 @@
           <div class="hero-word" id="hero-word">—</div>
           <p class="hero-desc" id="hero-desc">—</p>
         </div>
+
+        <!-- Compact share-card preview — lives next to the result so the
+             share feature is visible immediately, not just after scrolling
+             to the bottom actions bar. Opens the same full modal used by
+             the "Save card" button below. -->
+        <div class="hero-share" id="hero-share" onclick="openCardModal()">
+          <div class="hero-share-card">
+            <div class="hero-share-inner">
+              <div class="hero-share-label">Receipt</div>
+              <div class="hero-share-name" id="hs-title" style="color:var(--accent)">—</div>
+              <div class="hero-share-word" id="hs-word">—</div>
+              <div class="hero-share-dots"></div>
+              <div class="hero-share-scores" id="hs-scores"></div>
+              <div class="hero-share-dots"></div>
+              <div class="hero-share-swatch" id="hs-swatch"></div>
+            </div>
+          </div>
+          <div class="hero-share-cta">View share card ↗</div>
+        </div>
+
         <img class="hero-image" id="hero-image" src="" alt="" />
       </div>
     </div>
@@ -1146,6 +1284,7 @@
       track('result_viewed', { aesthetic: topAesthetic});
 
       renderHero(scoreData);
+      renderHeroShare(scoreData);
       renderFibGrid(scoreData.scores);
       renderUMAP(umapData, scoreData);
       await renderMoodboard(scoreData.top);
@@ -1212,6 +1351,34 @@
       blobLeft.style.opacity = '0.32';
       blobRight.style.background = COLORS[ranked[1]] || '#D4CEC4';
       blobRight.style.opacity = '0.28';
+    }
+
+    // Compact share-card preview shown directly in the hero, next to the
+    // result, so the share feature is visible the moment the page loads —
+    // not just discoverable after scrolling to the bottom actions bar.
+    function renderHeroShare(data) {
+      const color = COLORS[data.top] || '#1A1815';
+
+      document.getElementById('hs-title').textContent = capitalize(data.top);
+      document.getElementById('hs-title').style.color = color;
+      document.getElementById('hs-word').textContent = DESCRIPTORS[data.top] || '';
+
+      const top4 = Object.entries(data.scores).slice(0, 4);
+      document.getElementById('hs-scores').innerHTML = top4.map(([aesthetic, pct], i) => {
+        const c = COLORS[aesthetic] || '#1A1815';
+        return `
+          <div class="hero-share-score-row">
+            <div class="hero-share-score-name" style="color:${i === 0 ? color : '#1A1815'}">${aesthetic}</div>
+            <div class="hero-share-score-val" style="color:${i === 0 ? color : '#1A1815'}">${Math.round(pct)}%</div>
+          </div>`;
+      }).join('');
+
+      const allEntries = Object.entries(data.scores);
+      const total = allEntries.reduce((s, [, v]) => s + v, 0);
+      document.getElementById('hs-swatch').innerHTML = allEntries.map(([a, v]) => {
+        const w = (v / total) * 100;
+        return `<div style="flex:${w};background:${COLORS[a] || '#888'};opacity:0.85"></div>`;
+      }).join('');
     }
 
     function renderFreqChart(history, scores) {
