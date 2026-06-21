@@ -43,17 +43,29 @@ def main():
     model, _, preprocess = open_clip.create_model_and_transforms(
         "ViT-B-32", pretrained="openai"
     )
-    model = model.to(device)
+    # fp16 instead of the default fp32 — roughly halves the model's resident
+    # memory (ViT-B/32 weights go from ~350MB to ~175MB in this dtype alone).
+    # This is the actual lever being tested: if it's enough to clear
+    # Railway's container memory ceiling, no separate service is needed.
+    # Trade-off: fp16 on CPU is not guaranteed to be faster, and on some CPU
+    # builds of PyTorch certain fp16 ops fall back to fp32 internally anyway
+    # — the memory savings from holding fp16 weights still apply regardless.
+    model = model.to(device).half()
     model.eval()
 
     image = Image.open(image_path).convert("RGB")
-    tensor = preprocess(image).unsqueeze(0).to(device)
+    # Input tensor must match the model's dtype, or encode_image raises a
+    # dtype-mismatch error (the most common way this kind of change breaks).
+    tensor = preprocess(image).unsqueeze(0).to(device).half()
 
     with torch.no_grad():
         embedding = model.encode_image(tensor)
         embedding = embedding / embedding.norm(dim=-1, keepdim=True)
 
-    vec = embedding.cpu().numpy()[0].tolist()
+    # Cast back to float32 before serializing — JSON doesn't have a float16
+    # type, and downstream code in core.py (cosine_similarity, score, etc.)
+    # expects standard Python floats / numpy float64 anyway.
+    vec = embedding.float().cpu().numpy()[0].tolist()
 
     # Only this one line goes to stdout — the parent process reads exactly this.
     print(json.dumps({"embedding": vec}))
