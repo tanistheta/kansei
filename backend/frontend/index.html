@@ -334,19 +334,20 @@
         <span class="entry-arrow">↗</span>
       </a>
 
-      <!-- Classify-an-image entry — disabled. Root cause: CLIP inference
-           exceeds the hosting container's memory ceiling (confirmed via
-           OOM kill, exit -9, after both an import fix and an fp16
-           quantization attempt). The real fix is a separate inference
-           service with its own memory budget, which is real
-           infrastructure work, not a quick patch — so for now this is
-           honestly marked unavailable instead of silently failing on
-           click, which was actively costing first impressions. -->
-      <div class="entry entry-upload disabled" id="upload-zone">
+      <!-- Classify-an-image entry — live. CLIP inference now runs on an
+           isolated cloud service with its own memory budget, separate
+           from this app's own process, so the original Railway OOM
+           constraint no longer applies. -->
+      <div class="entry entry-upload" id="upload-zone">
         <span class="entry-num">02</span>
         <div class="entry-title">Classify an image</div>
         <p class="entry-desc">Drop any photo — a room, outfit, artwork, screenshot. CLIP reads its visual DNA and maps it instantly across all 16 aesthetics.</p>
-        <span class="soon-badge">Coming soon</span>
+        <span class="entry-arrow">↗</span>
+        <input type="file" id="file-input" accept="image/*" />
+        <div class="upload-overlay" id="upload-overlay">
+          <div class="upload-spinner"></div>
+          <span class="upload-text">Reading visual DNA...</span>
+        </div>
       </div>
     </div>
   </main>
@@ -356,5 +357,99 @@
     <span class="footer-text">v1.0 · 2026</span>
   </footer>
 
+  <script>
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const uploadOverlay = document.getElementById('upload-overlay');
+
+    function getSessionId() {
+      let id = sessionStorage.getItem('kansei_sid');
+      if (!id) {
+        id = crypto.randomUUID();
+        sessionStorage.setItem('kansei_sid', id);
+      }
+      return id;
+    }
+
+    function track(eventName, meta = null) {
+      fetch('/api/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: getSessionId(), event_name: eventName, meta }),
+      }).catch(() => {});
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+
+      uploadOverlay.classList.add('active');
+      track('classify_started');
+
+      try {
+        // Read the file as a data URL up front — result.html displays this
+        // as the hero image, and we need it before the file is consumed
+        // by the upload itself.
+        const imgData = await fileToDataURL(file);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/classify', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+
+        const result = await res.json();
+
+        sessionStorage.setItem('kansei_source', 'classify');
+        sessionStorage.setItem('kansei_classify_result', JSON.stringify(result));
+        sessionStorage.setItem('kansei_uploaded_image', imgData);
+
+        window.location.href = '/result';
+      } catch (err) {
+        console.error('Classify error:', err);
+        uploadOverlay.classList.remove('active');
+        alert('Could not classify image. Please try again.');
+      }
+    }
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+  </script>
 </body>
 </html>

@@ -1,7 +1,5 @@
 import json
-import subprocess
-import sys
-import tempfile
+import httpx
 import numpy as np
 import random
 import umap as umap_lib
@@ -9,7 +7,7 @@ from pathlib import Path
 from functools import lru_cache
 
 EMBEDDINGS_PATH = Path(__file__).parent / "kansei_embeddings.json"
-WORKER_PATH = Path(__file__).parent / "classify_worker.py"
+CLASSIFY_SERVICE_URL = "http://35.206.123.246:8001/classify"
 
 AESTHETIC_DESCRIPTIONS = {
     "afrofuturism": "Bold, cosmic, rooted in African tradition and speculative futures.",
@@ -314,48 +312,36 @@ def get_moodboard(aesthetic: str, n: int = 4) -> list[str]:
 
 def classify_image(image_bytes: bytes) -> dict:
     """
-    Runs CLIP inference in an isolated subprocess (classify_worker.py) so the
-    model's memory footprint is fully released by the OS the moment the
-    subprocess exits — it never accumulates inside this main FastAPI process.
+    Calls the isolated classify service running on a separate cloud VM,
+    instead of spawning a local subprocess. The service has its own
+    dedicated memory budget (a GCP e2-micro instance with swap configured
+    to absorb CLIP's ~918MB peak RSS) — fully decoupled from this app's
+    own memory ceiling, which is the constraint that caused the original
+    Railway OOM kills.
 
-    Trade-off, stated plainly: this is slower per-request than an in-process
-    cached model would be (full model reload every call, no caching across
-    requests), and it writes the uploaded image to a temp file since
-    subprocess args need a filesystem path, not raw bytes. Both costs are
-    acceptable for an occasional feature; neither would be acceptable if
-    classify were the app's hot path.
+    Trade-off, stated plainly: this adds network latency and an external
+    dependency (if the VM is down, this feature is down) in exchange for
+    removing the subprocess-reload cost on every call and the temp-file
+    write/cleanup the old implementation needed. Both are acceptable for
+    an occasional feature; neither would be acceptable as the app's hot path.
     """
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
-        tmp.write(image_bytes)
-        tmp_path = tmp.name
-
     try:
-        result = subprocess.run(
-            [sys.executable, str(WORKER_PATH), tmp_path],
-            capture_output=True,
-            text=True,
-            timeout=120,  # generous — first call may need to download weights
+        response = httpx.post(
+            CLASSIFY_SERVICE_URL,
+            files={"image": ("image.jpg", image_bytes, "image/jpeg")},
+            timeout=30.0,  # generous — cold model load on the remote service is rare but possible
         )
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
+        response.raise_for_status()
+    except httpx.TimeoutException:
+        raise RuntimeError("classify service timed out — it may be cold-starting, try again shortly")
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"classify service returned {e.response.status_code}: {e.response.text}")
+    except httpx.RequestError as e:
+        raise RuntimeError(f"could not reach classify service: {e}")
 
-    if result.returncode != 0:
-        raise RuntimeError(f"classify_worker failed (exit {result.returncode}): {result.stderr}")
-
-    # stdout may have warning/progress noise mixed in (tqdm, FutureWarning, etc.)
-    # even on success — find the actual JSON line by looking for one that starts with '{'
-    output = None
-    for line in result.stdout.strip().splitlines():
-        line = line.strip()
-        if line.startswith("{"):
-            output = json.loads(line)
-            break
-
-    if output is None:
-        raise RuntimeError(f"classify_worker produced no JSON output. stdout: {result.stdout!r} stderr: {result.stderr!r}")
-
-    if "error" in output:
-        raise RuntimeError(f"classify_worker error: {output['error']}")
+    output = response.json()
+    if "embedding" not in output:
+        raise RuntimeError(f"classify service produced unexpected response: {output!r}")
 
     user_vec = output["embedding"]
     return score([user_vec])
