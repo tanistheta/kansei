@@ -152,6 +152,19 @@
       gap: 1px;
       background: var(--border);
       border: 1px solid var(--border);
+      min-height: 200px;
+    }
+
+    /* Grid loading state */
+    .grid-loading {
+      grid-column: 1 / -1;
+      padding: 4rem 0;
+      text-align: center;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--bg);
     }
 
     /* Aesthetic card */
@@ -391,7 +404,7 @@
   </div>
 
   <div class="grid" id="grid">
-    <!-- populated by JS -->
+    <div class="grid-loading">Loading aesthetics…</div>
   </div>
 
   <!-- Modal -->
@@ -472,9 +485,10 @@
       "zen modern": "You design your world around silence. Empty space, single objects chosen with care, light that does the work.",
     };
 
-    // Image pool from server — populated at init
+    // Image pool from server — populated before first render
     let imagePool = {};
     let currentFilter = 'all';
+    let imagesReady = false;
 
     const STAMPS = {
       'quiet luxury':'◇','dark academia':'✦','ethereal':'✧',
@@ -485,83 +499,75 @@
       'teracotta modernism':'◉','cyber minimalism':'▸',
     };
 
-    async function init() {
-      // Load image pool from API
-      try {
-        const res = await fetch(`${API}/api/pairs?n=1`);
-        // We just need the image pool — fetch aesthetics list
-        // Use a trick: hit /api/aesthetics to get names confirmed
-      } catch(e) {}
-
-      renderGrid(currentFilter);
-      setupFilters();
-    }
-
     function capitalize(str) {
       return str.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
     }
 
-    function renderGrid(filter) {
-      const grid = document.getElementById('grid');
-      const filtered = filter === 'all'
-        ? AESTHETICS
-        : AESTHETICS.filter(a => a.tags.includes(filter));
-
-      grid.innerHTML = filtered.map(a => {
-        const imgUrl = `${API}/images/${encodeURIComponent(a.name)}/`;
-        return `
-          <div class="acard" data-name="${a.name}" onclick="openModal('${a.name}')">
-            <div class="acard-img-wrap">
-              <img class="acard-img"
-                src="${API}/images/${encodeURIComponent(a.name)}/${getFirstImage(a.name)}"
-                alt="${a.name}"
-                loading="lazy"
-                onerror="this.parentElement.innerHTML='<div class=\\'acard-placeholder\\'><span class=\\'placeholder-symbol\\'>${STAMPS[a.name] || '◈'}</span></div>'"
-              />
-            </div>
-            <div class="acard-color-bar" style="background:${a.color}"></div>
-            <div class="acard-body">
-              <div class="acard-name">${a.name}</div>
-              <div class="acard-desc">${DESCRIPTIONS[a.name] || ''}</div>
-              <div class="acard-word">${a.word}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // We don't know filenames without hitting the server — use a known pattern
-    // from the embeddings. For now, try loading the image and fall back gracefully.
-    // The actual first image will load or fall back to placeholder.
-    function getFirstImage(aesthetic) {
-      // Will fail gracefully via onerror if unknown; server serves directory
-      return ''; // triggers onerror → placeholder until we fetch
-    }
-
-    // Fetch real image lists from the proper endpoint
+    // Fetch real image lists for every aesthetic BEFORE any card renders.
+    // This removes the race condition entirely: cards only ever render
+    // once we actually know which filenames exist (or that none do).
     async function preloadImages() {
       try {
         const results = await Promise.all(
           AESTHETICS.map(a =>
-            fetch(`${API}/api/images/${encodeURIComponent(a.name)}`).then(r => r.json())
+            fetch(`${API}/api/images/${encodeURIComponent(a.name)}`)
+              .then(r => r.ok ? r.json() : { aesthetic: a.name, images: [] })
+              .catch(() => ({ aesthetic: a.name, images: [] }))
           )
         );
         results.forEach(data => {
-          if (data.images && data.images.length > 0) {
-            imagePool[data.aesthetic] = data.images;
-          }
+          imagePool[data.aesthetic] = (data.images && data.images.length) ? data.images : [];
         });
+      } catch (e) {
+        // Total failure — leave imagePool empty, cards fall back to placeholders
+      }
+      imagesReady = true;
+    }
 
-        // Update card images with real filenames
-        document.querySelectorAll('.acard').forEach(card => {
-          const name = card.dataset.name;
-          const imgs = imagePool[name];
-          if (imgs && imgs.length > 0) {
-            const imgEl = card.querySelector('.acard-img');
-            if (imgEl) imgEl.src = `${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(imgs[0])}`;
-          }
-        });
-      } catch(e) {}
+    function cardImageMarkup(a) {
+      const imgs = imagePool[a.name] || [];
+      if (imgs.length > 0) {
+        const src = `${API}/images/${encodeURIComponent(a.name)}/${encodeURIComponent(imgs[0])}`;
+        // onerror here only fires on a genuine load failure (404, network) —
+        // not on a timing race, since imagePool is already populated by now.
+        return `
+          <img class="acard-img"
+            src="${src}"
+            alt="${a.name}"
+            loading="lazy"
+            onerror="this.parentElement.innerHTML='<div class=&quot;acard-placeholder&quot;><span class=&quot;placeholder-symbol&quot;>${STAMPS[a.name] || '◈'}</span></div>'"
+          />`;
+      }
+      // No images for this aesthetic at all — go straight to placeholder,
+      // no failed network request, no flash of a broken image icon.
+      return `<div class="acard-placeholder"><span class="placeholder-symbol">${STAMPS[a.name] || '◈'}</span></div>`;
+    }
+
+    function renderGrid(filter) {
+      const grid = document.getElementById('grid');
+
+      if (!imagesReady) {
+        grid.innerHTML = '<div class="grid-loading">Loading aesthetics…</div>';
+        return;
+      }
+
+      const filtered = filter === 'all'
+        ? AESTHETICS
+        : AESTHETICS.filter(a => a.tags.includes(filter));
+
+      grid.innerHTML = filtered.map(a => `
+        <div class="acard" data-name="${a.name}" onclick="openModal('${a.name}')">
+          <div class="acard-img-wrap">
+            ${cardImageMarkup(a)}
+          </div>
+          <div class="acard-color-bar" style="background:${a.color}"></div>
+          <div class="acard-body">
+            <div class="acard-name">${a.name}</div>
+            <div class="acard-desc">${DESCRIPTIONS[a.name] || ''}</div>
+            <div class="acard-word">${a.word}</div>
+          </div>
+        </div>
+      `).join('');
     }
 
     function openModal(name) {
@@ -579,16 +585,15 @@
       const imgs = imagePool[name] || [];
       const imgContainer = document.getElementById('modal-images');
 
-      if (imgs.length >= 3) {
-        imgContainer.innerHTML = imgs.slice(0, 3).map((img, i) => `
+      if (imgs.length > 0) {
+        imgContainer.innerHTML = imgs.slice(0, 3).map(img => `
           <img class="modal-img" src="${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(img)}" alt="${name}" loading="lazy" />
         `).join('');
-      } else if (imgs.length > 0) {
-        imgContainer.innerHTML = imgs.map(img => `
-          <img class="modal-img" src="${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(img)}" alt="${name}" loading="lazy" />
-        `).join('');
+        // Pad remaining slots with surface color if fewer than 3 images
+        for (let i = imgs.length; i < 3; i++) {
+          imgContainer.innerHTML += `<div style="background:var(--surface)"></div>`;
+        }
       } else {
-        // No images loaded yet — show color placeholder
         imgContainer.innerHTML = `
           <div style="background:${a.color};opacity:0.2;display:flex;align-items:center;justify-content:center;font-size:3rem;color:${a.color}">
             ${STAMPS[name] || '◈'}
@@ -614,15 +619,6 @@
           btn.classList.add('active');
           currentFilter = btn.dataset.filter;
           renderGrid(currentFilter);
-          // Re-apply real images after re-render
-          document.querySelectorAll('.acard').forEach(card => {
-            const name = card.dataset.name;
-            const imgs = imagePool[name];
-            if (imgs && imgs.length > 0) {
-              const imgEl = card.querySelector('.acard-img');
-              if (imgEl) imgEl.src = `${API}/images/${encodeURIComponent(name)}/${encodeURIComponent(imgs[0])}`;
-            }
-          });
         });
       });
     }
@@ -633,7 +629,14 @@
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    init().then(() => preloadImages());
+    // Load real image data FIRST, then render once, with no race condition.
+    async function init() {
+      setupFilters();
+      await preloadImages();
+      renderGrid(currentFilter);
+    }
+
+    init();
   </script>
 </body>
 </html>
