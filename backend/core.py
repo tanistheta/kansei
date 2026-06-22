@@ -4,12 +4,23 @@ import os
 import numpy as np
 import random
 import umap as umap_lib
+import joblib
 from pathlib import Path
 from functools import lru_cache
 
 EMBEDDINGS_PATH = Path(__file__).parent / "kansei_embeddings.json"
 CLASSIFY_SERVICE_URL = "http://35.206.123.246:8001/classify"
 CLASSIFY_AUTH_TOKEN = os.environ.get("CLASSIFY_AUTH_TOKEN", "")
+
+# Where the fitted UMAP reducer is cached on disk. Lives in /data so it
+# persists across container restarts on the same volume as analytics.db —
+# fitting UMAP is a one-time cost against a fixed embedding set, not
+# something that needs to happen on every boot. On constrained hardware
+# (this app shares a 1GB e2-micro VM with a separate CLIP service), a
+# cold UMAP fit was observed to starve the process under memory pressure
+# badly enough that it never completed — caching removes that failure
+# mode entirely after the first successful fit.
+REDUCER_CACHE_PATH = Path("/data/umap_reducer.joblib")
 
 AESTHETIC_DESCRIPTIONS = {
     "afrofuturism": "Bold, cosmic, rooted in African tradition and speculative futures.",
@@ -75,9 +86,34 @@ def load_data():
 
 @lru_cache(maxsize=1)
 def get_reducer():
+    # Disk cache check first — avoids refitting UMAP on every container
+    # restart, which is wasted work against the same fixed embedding set
+    # and, on this VM's tight memory budget, was severe enough to hang
+    # rather than just run slowly.
+    if REDUCER_CACHE_PATH.exists():
+        try:
+            print(f"Loading cached UMAP reducer from {REDUCER_CACHE_PATH}...")
+            return joblib.load(REDUCER_CACHE_PATH)
+        except Exception as e:
+            # Cache file exists but failed to load (corrupted, version
+            # mismatch after a library upgrade, etc.) — fall through and
+            # refit rather than crashing the whole app over a cache miss.
+            print(f"Failed to load cached reducer ({e}), refitting...")
+
     _, _, all_vectors, _, _ = load_data()
     reducer = umap_lib.UMAP(n_components=3, random_state=42, n_neighbors=5, min_dist=0.5)
     reducer.fit(all_vectors)
+
+    try:
+        REDUCER_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(reducer, REDUCER_CACHE_PATH)
+        print(f"Cached fitted UMAP reducer to {REDUCER_CACHE_PATH}")
+    except Exception as e:
+        # Caching is an optimization, not a requirement — if /data isn't
+        # writable for some reason, the app should still work, just
+        # refit on every restart like before.
+        print(f"Could not cache reducer ({e}), will refit on next restart")
+
     return reducer
 
 
