@@ -402,7 +402,7 @@ def classify_image(image_bytes: bytes) -> dict:
             CLASSIFY_SERVICE_URL,
             files={"image": ("image.jpg", image_bytes, "image/jpeg")},
             headers={"X-Kansei-Auth": CLASSIFY_AUTH_TOKEN},
-            timeout=90.0,  # generous — e2-micro leans on disk-backed swap under
+            timeout=150.0,  # generous — e2-micro leans on disk-backed swap under
             # memory pressure, which can make a single request take 30-60s+;
             # 30s was too tight and caused real timeouts under that condition.
         )
