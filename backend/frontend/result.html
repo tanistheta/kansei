@@ -945,6 +945,16 @@
     Computing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
   </div>
 
+  <div class="loading-state" id="empty-state" style="display:none; flex-direction:column; gap:0.8rem; text-align:center;">
+    <div style="font-size:0.95rem; letter-spacing:0.05em;">Not enough to go on</div>
+    <div style="font-size:0.75rem; color:var(--text-dim, #A8A29C); max-width:380px; line-height:1.5;" id="empty-state-detail">
+      You skipped every pair, so there's no aesthetic signal to read.
+    </div>
+    <a href="/quiz" style="margin-top:0.6rem; font-size:0.7rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--text-secondary, #6B6560); border:1px solid var(--border, #D4CEC4); padding:0.6rem 1.6rem; text-decoration:none;">
+      Retake the quiz
+    </a>
+  </div>
+
   <div id="content" style="display:none">
 
     <!-- 1. Hero -->
@@ -1280,6 +1290,17 @@
       topAesthetic = scoreData.top;
       topColor = scoreData.color;
       allScores = scoreData.scores;
+
+      if (scoreData.insufficient_data) {
+        track('result_insufficient_data', { choices_made: scoreData.choices_made });
+        const detail = document.getElementById('empty-state-detail');
+        if (scoreData.choices_made > 0) {
+          detail.textContent = `You only made ${scoreData.choices_made} real ${scoreData.choices_made === 1 ? 'choice' : 'choices'} — skip too many pairs and there's nothing to read your taste from.`;
+        }
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'flex';
+        return;
+      }
 
       track('result_viewed', { aesthetic: topAesthetic});
 

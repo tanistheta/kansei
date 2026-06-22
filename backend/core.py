@@ -85,10 +85,35 @@ def cosine_similarity(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
+# Minimum real (non-skipped) choices needed before a quiz result is
+# statistically meaningful. Below this, the weighted-mean vector is
+# noise-dominated rather than a signal — so we refuse to compute a result
+# instead of returning a misleadingly confident one. This only applies to
+# the quiz flow; classify_image() passes min_required=1 since a single
+# CLIP embedding from an uploaded image is a complete, high-confidence
+# signal on its own — not a "skip".
+MIN_CHOICES_FOR_RESULT = 3
+
+
 def score(
     user_vectors: list[list[float]],
-    weights: list[float] | None = None
+    weights: list[float] | None = None,
+    min_required: int = MIN_CHOICES_FOR_RESULT,
 ) -> dict:
+    if len(user_vectors) < min_required:
+        return {
+            "insufficient_data": True,
+            "choices_made": len(user_vectors),
+            "min_required": min_required,
+            "scores": {},
+            "top": None,
+            "description": "",
+            "color": "#A8A29C",
+            "moodboard": [],
+            "consistency": {"score": 0, "label": "Unknown", "desc": "Not enough choices to measure."},
+            "rejections": None,
+        }
+
     centroids, _, _, _, _ = load_data()
 
     # Weighted mean — later choices carry more weight
@@ -205,6 +230,9 @@ def nearest_images(user_vectors: list[list[float]], k: int = 5) -> list[dict]:
     kNN: find the k most similar individual images to the user's mean vector.
     Returns image filename, aesthetic label, and similarity score.
     """
+    if len(user_vectors) < MIN_CHOICES_FOR_RESULT:
+        return []
+
     _, _, all_vectors, all_labels, all_images = load_data()
 
     vecs = np.array(user_vectors)
@@ -234,6 +262,9 @@ def nearest_images(user_vectors: list[list[float]], k: int = 5) -> list[dict]:
 
 
 def get_umap_projection(user_vectors: list[list[float]]) -> dict:
+    if len(user_vectors) < MIN_CHOICES_FOR_RESULT:
+        return {"points": [], "centroids": [], "user": None}
+
     centroids, _, all_vectors, all_labels, _ = load_data()
     reducer = get_reducer()
 
@@ -349,4 +380,4 @@ def classify_image(image_bytes: bytes) -> dict:
         raise RuntimeError(f"classify service produced unexpected response: {output!r}")
 
     user_vec = output["embedding"]
-    return score([user_vec])
+    return score([user_vec], min_required=1)
