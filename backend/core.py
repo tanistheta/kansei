@@ -1,5 +1,6 @@
 import json
 import httpx
+import os
 import numpy as np
 import random
 import umap as umap_lib
@@ -8,6 +9,7 @@ from functools import lru_cache
 
 EMBEDDINGS_PATH = Path(__file__).parent / "kansei_embeddings.json"
 CLASSIFY_SERVICE_URL = "http://35.206.123.246:8001/classify"
+CLASSIFY_AUTH_TOKEN = os.environ.get("CLASSIFY_AUTH_TOKEN", "")
 
 AESTHETIC_DESCRIPTIONS = {
     "afrofuturism": "Bold, cosmic, rooted in African tradition and speculative futures.",
@@ -329,6 +331,7 @@ def classify_image(image_bytes: bytes) -> dict:
         response = httpx.post(
             CLASSIFY_SERVICE_URL,
             files={"image": ("image.jpg", image_bytes, "image/jpeg")},
+            headers={"X-Kansei-Auth": CLASSIFY_AUTH_TOKEN},
             timeout=30.0,  # generous — cold model load on the remote service is rare but possible
         )
         response.raise_for_status()
