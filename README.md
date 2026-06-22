@@ -1,141 +1,141 @@
 # Kansei (感性)
 
-> Discover your aesthetic identity through visual preference.
+Discover your aesthetic identity through a 25-image-pair quiz. Choices are encoded with CLIP, mapped against 16 aesthetic centroids in embedding space, and visualized with UMAP. You can also upload any image and have it classified directly.
 
-**[kansei.up.railway.app](https://kansei.up.railway.app)**
-
-Kansei maps your taste into CLIP's semantic embedding space through 25 image pair comparisons, then tells you where you live — your blend of 16 aesthetic identities, visualized in 3D.
+**Live:** [kansei.duckdns.org](https://kansei.duckdns.org)
 
 ---
 
-## How it works
+## What this is
 
-1. You pick between 25 image pairs
-2. Each pick accumulates a preference vector in CLIP's 512-dimensional embedding space
-3. Your vector is compared against 16 aesthetic cluster centroids via cosine similarity
-4. You get a primary aesthetic + full breakdown with percentages
-5. Your position is visualized in a 3D UMAP projection of the entire image space
-6. kNN finds the 5 individual images closest to your taste vector
-7. Rejection analysis tracks what you actively avoided
+Kansei takes a simple idea — "what pulls you in, visually?" — and backs it with real embedding-space math instead of a quiz-app multiple-choice scoring trick. Every choice you make is a CLIP vector. Your final result is a weighted mean of those vectors, scored by cosine similarity against 16 aesthetic centroids built from a 102-image dataset. The same pipeline runs in reverse for the "classify an image" feature: upload any photo, get its CLIP embedding, see which aesthetic it's closest to.
 
----
-
-## Features
-
-- **Quiz** — 25 image pairs, centroids preloaded at init for zero-latency choices
-- **Image classify** — drop any photo, CLIP reads its visual DNA instantly, served by an isolated inference microservice (see [Architecture](#architecture) below)
-- **Result page** — aesthetic DNA bar, 3D UMAP plot, Fibonacci score grid, consistency score, rejection analysis, nearest images
-- **Explore** — browse all 16 aesthetics with descriptions and images
-- **Share card** — receipt-style downloadable card with your aesthetic breakdown
-
----
-
-## Aesthetics
-
-Afrofuturism · Boho · Brutalism · Coastal Cool · Cottagecore · Cyber Minimalism · Cyberpunk · Dark Academia · Ethereal · Glam Maximalism · Quiet Luxury · Solarpunk · Terracotta Modernism · Vintage Americana · Wabi Sabi · Zen Modern
-
----
-
-## Stack
-
-| Layer | Tech |
-|---|---|
-| Embeddings | CLIP (ViT-B/32) via `open-clip-torch` |
-| Dimensionality reduction | UMAP (3D projection) |
-| Scoring | Cosine similarity + cubic amplification curve |
-| Backend | FastAPI + Uvicorn |
-| Frontend | Vanilla HTML/CSS/JS |
-| Visualization | Plotly (3D scatter) |
-| Main app deployment | Railway |
-| Classify inference | Dockerized FastAPI microservice on GCP Compute Engine (e2-micro) |
+The interesting parts of this project were never the quiz UI. They were the infrastructure problems underneath it — a CLIP model is heavy, free-tier hosting is light, and making those two facts coexist is most of what this README is actually about.
 
 ---
 
 ## Architecture
 
-The quiz flow and the classify flow share the same scoring pipeline (mean CLIP vector → cosine similarity → ranked aesthetics) but run on physically separate infrastructure, for a reason worth documenting rather than hiding.
-
-**The problem:** CLIP's full load — model weights plus PyTorch's runtime overhead — peaks at measured **918MB RSS** (profiled stage-by-stage: imports alone cost ~316MB before any model touches memory; the fp32 weight load is the single largest jump, ~580MB in one step). Railway's container gives the whole app a shared 1GB ceiling. Loading CLIP inside the same process as the main app reliably triggered an OOM kill.
-
-**What didn't work:** fp16 quantization (halves weight size on paper, but PyTorch's CPU build doesn't guarantee fp16 ops stay fp16 internally, and it doesn't touch the ~316MB import overhead anyway). Subprocess isolation alone (the OS reclaims subprocess memory on exit, but doesn't help if the *peak* during execution still exceeds the shared ceiling).
-
-**What worked:** moving classify into its own container, on its own machine, with its own memory budget — fully decoupled from the main app's ceiling.
+Kansei runs as two independent services, deliberately split apart rather than as one monolith:
 
 ```
-┌─────────────────┐         HTTPS, auth header        ┌──────────────────────┐
-│  Railway          │ ──────────────────────────────▶ │  GCP e2-micro VM      │
-│  (main FastAPI app)│                                  │  Docker container     │
-│  quiz · result ·  │ ◀────────────────────────────── │  CLIP ViT-B/32 (fp16) │
-│  explore · score  │      embedding (512-d JSON)       │  FastAPI + uvicorn    │
-└─────────────────┘                                     └──────────────────────┘
+┌─────────────────────────┐         ┌──────────────────────────┐
+│   Main App (FastAPI)    │  HTTP   │  Classify Service         │
+│   GCP e2-micro VM       │ ──────► │  (CLIP inference)         │
+│   :8000, behind Caddy   │         │  same VM, :8001            │
+│                          │         │                            │
+│   - quiz / explore /    │         │  - loads CLIP ViT-B/32     │
+│     result pages        │         │  - gated by shared-secret  │
+│   - UMAP projection      │         │    auth header             │
+│     (cached on disk)     │         │  - swap-backed under load  │
+│   - SQLite analytics     │         │                            │
+└─────────────────────────┘         └──────────────────────────┘
+        │                                      │
+        └──────────── /data volume ────────────┘
+         (analytics.db, umap_reducer.joblib)
 ```
 
-Notes on the deployment, stated plainly rather than glossed over:
+Both containers run on a single **GCP e2-micro VM** (free tier: 1 vCPU burstable, 964MB RAM, 20GB disk). Caddy sits in front of the main app, terminating HTTPS and proxying to `localhost:8000`. The classify service is exposed directly on `:8001`, gated by a shared-secret header rather than left open.
 
-- The VM runs on GCP's free tier (e2-micro, 1GB RAM). That's *tighter* than the 918MB peak with zero margin for the OS and Docker daemon's own overhead, so the service runs with a 2GB swap file to absorb the difference. This trades occasional latency (a request that hits swapped memory can take longer) for not OOM-crashing — a deliberate, documented tradeoff rather than an oversight.
-- The classify endpoint is gated by a shared-secret header, separate from the open `0.0.0.0/0` firewall rule — the firewall has to stay open since Railway's free tier has no static outbound IP to allowlist against instead, so the auth check is what actually keeps the endpoint from being usable by the constant bot traffic that scans every public IP on the internet.
-- A real packaging bug surfaced during containerization: installing `torch` and `open-clip-torch` in separate `pip install` steps let pip's resolver silently pull in the full CUDA toolkit (~6GB of `nvidia-*` packages) to satisfy a loose version constraint, even though the service is CPU-only. Fixed by resolving all torch-related packages in a single `pip install` call against PyTorch's CPU-only wheel index — dropped the image from 9.2GB to 1.62GB.
+This used to be two different platforms — the main app on Railway, classify on this same GCP VM — calling each other over the public internet. It's now fully consolidated onto one box. The "why" for that move, and everything that broke along the way, is below.
+
+---
+
+## Why it moved off Railway
+
+Railway's free trial ran out. The obvious fix was to pay for Hobby tier and move on. The choice made instead was to migrate onto a free-tier GCP VM and stay there deliberately — not because I was looking to save up a few bucks, but because **the constraint was the point**. Anyone can rent more RAM. Making a CLIP model, a UMAP fit, and a web app all coexist on a 964MB box that GCP itself doesn't recommend for production is a different kind of problem, and a more honest test of whether the engineering actually holds up. Every fix below exists because of that choice, not despite it.
+
+The migration surfaced real problems that a clean "lift and shift" never does:
+
+### `torch` and `open-clip-torch` were dead weight in the main app
+
+The main app's `requirements.txt` still listed `torch` and `open-clip-torch` from before the classify feature was split into its own service. Nothing in the live request path imported them — a `grep` across the codebase confirmed every usage lived in `classify_worker.py` (the old subprocess approach, now dead code) and a one-off profiling script. Removing both dropped the main app's Docker image from a multi-gigabyte build down to **1.01GB**, with no functional change.
+
+### Disk ran out mid-build
+
+The VM's original 10GB disk had **2.3GB free** after the classify image was already on it — tight enough that adding a second image risked running out mid-build. Rather than fight for space, the disk was resized live to 20GB (`growpart` + `resize2fs`, no downtime, still within GCP's always-free persistent-disk allowance).
+
+### HTTPS wasn't optional — it was load-bearing
+
+The quiz initially failed silently in production with `crypto.randomUUID is not a function`. The cause: that browser API is restricted to secure contexts (HTTPS or localhost), and the app was being served over plain HTTP at `http://<ip>:8000`. This wasn't a nice-to-have — without HTTPS, the session-tracking code that the whole quiz flow depends on simply doesn't run in modern browsers.
+
+Fixed with a **free domain (DuckDNS) + Caddy + Let's Encrypt**, fully automated, zero ongoing cost. Caddy also collapsed the port number out of the URL — `kansei.duckdns.org`, not `kansei.duckdns.org:8000`.
+
+### The classify auth token never made the jump
+
+Railway had `CLASSIFY_AUTH_TOKEN` set in its dashboard. The VM's `docker run` command for the new container didn't pass it, so the running container had an empty token and every classify request was rejected with a clean, correctly-functioning 401 — the auth gate working exactly as designed, just against the wrong service. Fixed by passing the real token explicitly via `-e CLASSIFY_AUTH_TOKEN=...` on container start.
+
+### A real, previously-latent bug in the UMAP projection code
+
+`get_umap_projection()` enforced a fixed minimum-choices threshold (3) with no way to override it — fine for the quiz, but the classify endpoint calls the same function with a single embedding, which used to silently route through a different, already-overridable function (`score()`) but hit the *un*-overridable one for UMAP specifically. The result: classify would return a valid score, then crash the result page rendering `null.x` in the UMAP visualization. Fixed by adding the same `min_required` override to `get_umap_projection()` that `score()` already had, and passing `min_required=1` from the classify endpoint.
+
+This bug existed before tonight — it just never had a code path that exercised it until classify actually started working end-to-end again.
+
+### Refitting UMAP on every restart was real, avoidable cost
+
+Every container restart re-fit UMAP from scratch against the same 102-image dataset — wasted, deterministic work. On this VM's CPU budget, that refit was severe enough to make a restart look hung rather than just slow. Fixed by fitting once locally (on a machine with real headroom), caching the result to disk (`joblib.dump`), and loading the cached fit on every subsequent boot. The cache file lives on the same persistent volume as the analytics database, so it survives restarts and rebuilds.
+
+### The e2-micro's CPU ceiling is real, and it's not a bug
+
+Classify timing varied wildly in testing — 50 seconds one run, two minutes the next, with memory usage staying flat the whole time. The cause isn't memory: **GCP's e2-micro is explicitly documented to sustain only 25% CPU time total**, bursting above that only when the shared host has spare capacity. CLIP inference is CPU-bound matrix math, and that 25% ceiling is the actual constraint — not something `docker run` flags or memory tuning can fix.
+
+Rather than chase a problem with the wrong tool, the timeout was raised to a value that reflects observed reality (90s → 150s), and the loading state in the UI was updated to honestly say so ("can take up to 2 min") instead of pretending it's instant.
+
+---
+
+## Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+| Backend | FastAPI | Async-friendly, typed, fast to iterate on |
+| Embeddings | CLIP ViT-B/32 (open_clip) | Strong general-purpose visual embeddings, no fine-tuning needed |
+| Dimensionality reduction | UMAP | Preserves local structure better than PCA/t-SNE for this dataset size |
+| Storage | SQLite | Zero-ops, file-based, fine at this scale; fitted UMAP reducer cached the same way |
+| Frontend | Vanilla HTML/CSS/JS | No build step, no framework overhead for 4 pages |
+| Infrastructure | GCP e2-micro (free tier), Docker, Caddy | Two containers, one box, free HTTPS via Let's Encrypt |
+| Domain | DuckDNS (free) | No paid domain needed for Let's Encrypt to issue a real cert |
+
+---
+
+## API
+
+| Endpoint | Method | What it does |
+|---|---|---|
+| `/api/pairs` | GET | Generate N random aesthetic image pairs for the quiz |
+| `/api/score` | POST | Score a set of choice vectors against all 16 centroids |
+| `/api/umap` | POST | 3D UMAP projection of the user's result alongside the full dataset |
+| `/api/nearest` | POST | k-nearest individual images to the user's result vector |
+| `/api/classify` | POST | Upload an image, get it classified via the CLIP inference service |
+| `/api/aesthetics` | GET | List all 16 aesthetics with descriptions and colors |
+| `/api/event` | POST | Fire-and-forget analytics event logging |
+| `/api/event/summary` | GET | Funnel breakdown + share-rate metric |
+
+The classify service (separate container, `:8001`) exposes its own minimal surface: `/health` (open, used for liveness checks) and `/classify` (gated by `X-Kansei-Auth` header).
 
 ---
 
 ## Local setup
 
 ```bash
-git clone https://github.com/tanistheta/kansei.git
-cd kansei/backend
+cd backend
+python -m venv venv
+venv\Scripts\activate          # or `source venv/bin/activate` on Linux/Mac
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Open `http://127.0.0.1:8000`
-
-### Image structure
-
-Images live in `backend/images/<aesthetic>/`. The CLIP embeddings are precomputed and stored in `backend/kansei_embeddings.json`. To recompute after adding images:
+The classify feature requires `CLASSIFY_AUTH_TOKEN` to be set to match whatever the classify service expects — without it, `/api/classify` will return a 401 (the auth gate working correctly, just with no credentials supplied). See `.env.example` if present, or set it directly:
 
 ```bash
-python scripts/precompute.py
+$env:CLASSIFY_AUTH_TOKEN = "your-token-here"   # PowerShell
 ```
-
-### Running the classify service locally
-
-The classify microservice lives in `classify_service/` as a separate Docker build:
-
-```bash
-cd classify_service
-docker build -t kansei-classify .
-docker run -d -p 8001:8001 -e CLASSIFY_AUTH_TOKEN="your-token-here" --name kansei-classify-container kansei-classify
-```
-
-The main app's `core.py` expects `CLASSIFY_SERVICE_URL` to point at wherever this is running, and `CLASSIFY_AUTH_TOKEN` (set as an environment variable, not hardcoded) to match.
-
----
-
-## API
-
-### Main app (`backend/`)
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/pairs?n=25` | GET | Random image pairs for quiz |
-| `/api/centroid/{aesthetic}` | GET | CLIP centroid vector for an aesthetic |
-| `/api/score` | POST | Score user vectors against all 16 centroids |
-| `/api/nearest` | POST | kNN — find closest images to user vector |
-| `/api/umap` | POST | 3D UMAP projection of user position |
-| `/api/classify` | POST | Classify an uploaded image (proxies to the classify service) |
-| `/api/images/{aesthetic}` | GET | List images for an aesthetic |
-
-### Classify service (`classify_service/`)
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/health` | GET | none | Liveness check |
-| `/classify` | POST | `X-Kansei-Auth` header | CLIP inference on an uploaded image, returns a 512-d embedding |
 
 ---
 
 ## Project context
 
-Built as a portfolio project exploring the intersection of aesthetic theory and ML embedding spaces. Uses CLIP's visual-semantic representations as a proxy for subjective taste — the hypothesis being that aesthetic preference clusters meaningfully in embedding space even without explicit labels.
+This started as a way to combine an interest in aesthetics and visual identity with a working CLIP + UMAP pipeline — not as a resume line item first. It became one anyway, because the infrastructure problems that showed up were real engineering, not portfolio theater.
 
-Both the quiz and classify flows use the same underlying pipeline: user preference → mean CLIP vector → cosine similarity against aesthetic centroids → ranked output. They differ only in how that vector is produced, and — as of the classify feature's rebuild — in the infrastructure each one runs on.
+The free-tier constraint specifically was a deliberate choice, not a budget default. Staying on a 964MB VM instead of upgrading meant actually confronting an OOM kill, a CPU-bursting ceiling, and a memory-pressure freeze, rather than paying to make those problems disappear before they taught anything. That's the difference between a project that demonstrates "I can deploy something" and one that demonstrates "I can find out why something breaks and fix the actual cause" — and the second one was always the goal here.
+
+Every tradeoff documented above — swap over a bigger VM, a longer timeout over a rewrite, a free domain over a paid one — was made under that same constraint, on purpose. That's the part worth reading closely if you're evaluating this as more than a quiz app.
