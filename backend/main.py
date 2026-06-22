@@ -147,7 +147,7 @@ async def api_classify(file: UploadFile = File(...)):
 
     top = list(scores.keys())[0]
     proxy_vector = get_centroid(top)
-    umap_data = get_umap_projection([proxy_vector])
+    umap_data = get_umap_projection([proxy_vector], min_required=1)
     nearest = nearest_images([proxy_vector], k=5)
     return {
         "scores": scores,

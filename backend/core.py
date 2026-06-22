@@ -297,8 +297,11 @@ def nearest_images(user_vectors: list[list[float]], k: int = 5) -> list[dict]:
     return results
 
 
-def get_umap_projection(user_vectors: list[list[float]]) -> dict:
-    if len(user_vectors) < MIN_CHOICES_FOR_RESULT:
+def get_umap_projection(
+    user_vectors: list[list[float]],
+    min_required: int = MIN_CHOICES_FOR_RESULT,
+) -> dict:
+    if len(user_vectors) < min_required:
         return {"points": [], "centroids": [], "user": None}
 
     centroids, _, all_vectors, all_labels, _ = load_data()
