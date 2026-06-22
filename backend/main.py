@@ -93,6 +93,15 @@ def api_centroid(aesthetic: str):
 @app.post("/api/score")
 def api_score(payload: ChoicesPayload):
     scores = score(payload.vectors)
+
+    # score() now returns its own complete response shape directly when
+    # there isn't enough data (insufficient_data=True) — pass it straight
+    # through instead of re-wrapping it as if it were a plain aesthetic
+    # score dict, which previously corrupted the response (e.g. "top"
+    # became the literal string "insufficient_data").
+    if isinstance(scores, dict) and scores.get("insufficient_data"):
+        return scores
+
     top = list(scores.keys())[0]
 
     # Real consistency from embedding variance
@@ -129,6 +138,13 @@ def api_umap(payload: ChoicesPayload):
 async def api_classify(file: UploadFile = File(...)):
     contents = await file.read()
     scores = classify_image(contents)
+
+    # Same guard as api_score() — classify_image() calls score() under the
+    # hood, which can in principle return its insufficient_data shape
+    # directly rather than a plain aesthetic dict.
+    if isinstance(scores, dict) and scores.get("insufficient_data"):
+        return scores
+
     top = list(scores.keys())[0]
     proxy_vector = get_centroid(top)
     umap_data = get_umap_projection([proxy_vector])
